@@ -1,7 +1,6 @@
 import xarray as xr
 import numpy as np
-import xgcm
-import xesmf as xe
+
 from matplotlib import pyplot as plt
 from matplotlib import cm
 

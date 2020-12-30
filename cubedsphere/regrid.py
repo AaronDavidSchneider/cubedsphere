@@ -1,7 +1,8 @@
 """
 Inspired from https://github.com/JiaweiZhuang/cubedsphere/blob/master/example_notebooks/C2L_regrid.ipynb
 """
-
+import xesmf as xe
+import numpy as np
 
 def regrid(ds_in, ds_out, dr_in, filename=None):
     """Convenience function for one-time regridding"""

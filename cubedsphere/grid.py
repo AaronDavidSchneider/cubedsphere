@@ -1,4 +1,11 @@
-def init_grid(grid_files="../run/grid.t{:03d}.nc"):
+import xarray as xr
+import xgcm
+import numpy as np
+
+import os
+
+def init_grid(grid_dir):
+    grid_files = os.path.join(grid_dir,"grid.t{:03d}.nc")
     grid_list = [xr.open_dataset(grid_files.format(i)) for i in range(1, 7)]
     grid_nc = xr.concat(grid_list, dim=range(6))
     face_connections = {'concat_dim':
