@@ -1,3 +1,3 @@
 from .plotraw import plotCS_wrapper as plotCS
 from .grid import init_grid
-from .regrid import C2L
+from .regrid import Regridder

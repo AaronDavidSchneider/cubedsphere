@@ -4,9 +4,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import cm
 
+from .const import FACEDIM
+
+
 
 def flatten_ds(ds):
-    return xr.concat([ds.isel(concat_dim=i) for i in range(6)], dim="X")
+    return xr.concat([ds.isel(**{FACEDIM: i}) for i in range(6)], dim="X")
 
 
 def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
