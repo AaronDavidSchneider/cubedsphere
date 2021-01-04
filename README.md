@@ -1,6 +1,13 @@
 # cubedsphere
 Library for post processing of MITgcm cubed sphere data
 
+## Capabilities:
+- regrid cubed sphere datasets using [`xESMF`](https://xesmf.readthedocs.io/en/latest/) and [`xgcm`](https://xgcm.readthedocs.io/en/latest/)
+- open datasets created by the [`mnc`](https://mitgcm.readthedocs.io/en/latest/outp_pkgs/outp_pkgs.html#netcdf-i-o-pkg-mnc) package
+- plot original cubed sphere data
+- some more small utilities
+- more to come...
+
 ## Note:
 Work in progress! This library is a collection of tools that I found useful to use for the interpretation of cubed sphere data.
 
@@ -86,4 +93,4 @@ plt.show()
 ## Credits
 Many of the methods come from: https://github.com/JiaweiZhuang/cubedsphere
 
-I would especially like to thank @rabernat for providing `xgcm` and @JiaweiZhuang for providing `xESMF`.
+I would especially like to thank [@rabernat](https://github.com/rabernat) for providing  [`xgcm`](https://xgcm.readthedocs.io/en/latest/) and [@JiaweiZhuang](https://github.com/JiaweiZhuang) for providing [`xESMF`](https://xesmf.readthedocs.io/en/latest/).
