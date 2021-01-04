@@ -19,5 +19,6 @@ setuptools.setup(
         "scipy",
         "numpy",
         "matplotlib",
+        "f90nml"
     ]
 )
