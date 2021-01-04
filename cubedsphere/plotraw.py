@@ -6,10 +6,11 @@ from matplotlib import cm
 
 from .const import FACEDIM
 
-
-
 def flatten_ds(ds):
     return xr.concat([ds.isel(**{FACEDIM: i}) for i in range(6)], dim="X")
+
+def flatten_ds_interface(ds):
+    return xr.concat([ds.isel(**{FACEDIM: i}) for i in range(6)], dim="Xp1")
 
 
 def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
@@ -34,22 +35,41 @@ def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
     # must convert xarray objects to raw numpy arrays
     # otherwise numpy masking functions won't work
 
-    assert dr.shape == ds[
-        "XC"].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds['XC'].shape}"
+    x_dim, y_dim = "lon", "lat"
 
-    if len(ds["XC"].shape) > 2:
-        ds = flatten_ds(ds)
-        dr = flatten_ds(dr)
+    if len(ds["lon"].shape) > 2:
+        if ds["lon"].shape[-1] == dr.shape[-1]:
+            x_dim = "lon"
+            x = flatten_ds(ds[x_dim]).values
+            data = flatten_ds(dr).values
+        elif ds["lon_b"].shape[-1] == dr.shape[-1]:
+            x_dim = "lon_b"
+            x = flatten_ds_interface(ds[x_dim]).values
+            data = flatten_ds_interface(dr).values
+        if ds["lat"].shape[-2] == dr.shape[-2]:
+            y_dim = "lat"
+            y = flatten_ds(ds[y_dim]).values
+        elif ds["lat_b"].shape[-2] == dr.shape[-2]:
+            y_dim = "lat_b"
+            y = flatten_ds_interface(ds[y_dim]).values
 
-    x = ds['XC'].values
-    y = ds['YC'].values
-    data = dr.values
+    else:
+        x = ds[x_dim].values
+        y = ds[y_dim].values
+        data = dr.values
+    #assert dr.shape == ds[
+    #    x_dim].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds[x_dim].shape}"
+    #assert dr.shape == ds[
+    #    y_dim].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds[y_dim].shape}"
 
     if mask_size is not None:
-        mask = np.abs(x - 180) < mask_size
-        data = np.ma.masked_where(mask, data)
+        try:
+            mask = np.abs(x - 180) < mask_size
+            data = np.ma.masked_where(mask, data)
+        except IndexError:
+            print("caution: No masking possible!")
 
-    plot_cs_raw(x,y,data,**kwargs)
+    plot_cs_raw(x, y, data, **kwargs)
 
 
 def plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):

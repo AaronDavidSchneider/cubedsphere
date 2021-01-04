@@ -6,10 +6,22 @@ from .const import FACEDIM
 
 import os
 
-def init_grid(grid_dir):
-    grid_files = os.path.join(grid_dir,"grid.t{:03d}.nc")
-    grid_list = [xr.open_dataset(grid_files.format(i)) for i in range(1, 7)]
-    grid_nc = xr.concat(grid_list, dim=range(6))
+def init_grid(grid_dir=None, ds=None):
+    """
+
+    :param grid_dir: direction where the grid can be found (optional)
+    :param ds: dataset that contains the grid (optional)
+    :return:
+    """
+    if grid_dir is not None:
+        grid_files = os.path.join(grid_dir,"grid.t{:03d}.nc")
+        grid_list = [xr.open_dataset(grid_files.format(i)) for i in range(1, 7)]
+        grid_nc = xr.concat(grid_list, dim=range(6))
+    elif ds is not None:
+        grid_nc = ds
+    else:
+        raise TypeError("you need to specify ds or grid_dir")
+
     face_connections = {FACEDIM:
                             {0: {'X': ((4, 'Y', False), (1, 'X', False)),
                                  'Y': ((5, 'Y', False), (2, 'X', False))},
