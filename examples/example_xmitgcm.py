@@ -26,12 +26,12 @@ ds_reg["T"].isel(**isel_dict).plot(vmin=260,vmax=312, add_colorbar=False)
 U, V = ds_reg["U"].isel(**isel_dict).values, ds_reg["V"].isel(**isel_dict).values
 cs.overplot_wind(ds_reg, U, V)
 plt.gca().set_aspect('equal')
-plt.savefig("../docs/temp_ascii_concat_reg.png")
+plt.savefig("../docs/temp_ascii_reg.png")
 plt.show()
 
 # Now also plotting theta without regridding (on the original grid):
 fig = plt.figure(figsize=(8,6), constrained_layout=True)
 cs.plotCS(ds_ascii["T"].isel(**isel_dict), ds_ascii, mask_size=5, vmin=260,vmax=312,)
 plt.gca().set_aspect('equal')
-plt.savefig("../docs/temp_ascii_concat_direct.png")
+plt.savefig("../docs/temp_ascii_direct.png")
 plt.show()
