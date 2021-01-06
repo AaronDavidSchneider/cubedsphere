@@ -5,44 +5,72 @@ import xesmf as xe
 import xarray as xr
 import numpy as np
 import warnings
-from .const import FACEDIM
+import cubedsphere.const as c
 from .grid import init_grid
+from .utils import flatten_ds
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 class Regridder:
-    def __init__(self, ds, d_lon=5, d_lat=4, filename="weights", method='conservative', **kwargs):
+    def __init__(self, ds, d_lon=5, d_lat=4, concat_mode=True, filename="weights", method='conservative', **kwargs):
         """
         Build the regridder objects (one for each face).
 
         :param ds: dataset to be regridded. Dataset must contain grid information.
         :param d_lon: Longitude step size, i.e. grid resolution.
         :param d_lat: Latitude step size, i.e. grid resolution.
-        :param filename: filename for weights (weights will be name filename + _tile{i}.nc)
+        :param concat_mode: use one regridding instance instead of one regridder for each face
+        :param filename: filename for weights (weights will be name filename(+ _tile{i}).nc)
         :param method: Regridding method. See xe.Regridder for options.
         :param kwargs: Optional parameters that are passed to xe.Regridder (see xe.Regridder for options).
         """
-        self._rename_dict = {'XC': 'lon',
-                              'XG': 'lon_b',
-                              'YC': 'lat',
-                              'YG': 'lat_b'}
-        try:
-            self._ds = ds.rename(self._rename_dict)
-        except ValueError:
-            self._ds = ds
 
-        self._grid_in = [None] * 6
-        for i in range(6):
-            self._grid_in[i] = {'lat': self._ds['lat'].isel(**{FACEDIM:i}), 'lon': self._ds['lon'].isel(**{FACEDIM:i}),
-                               'lat_b': self._ds['lat_b'].isel(**{FACEDIM:i}), 'lon_b': self._ds['lon_b'].isel(**{FACEDIM:i})}
+        self._ds = ds
 
         self.grid = self._build_output_grid(d_lon, d_lat)
         self._method = method
+        self._concat_mode = concat_mode
 
-        self.regridder = [
-            xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i+1}.nc", method=self._method, **kwargs)
-            for i in range(6)]
+        if self._concat_mode:
+            self._build_regridder_concat(filename, **kwargs)
+        else:
+            self._build_regridder_faces(filename, **kwargs)
+
+    def _build_regridder_faces(self, filename, **kwargs):
+        self._grid_in = [None] * 6
+        for i in range(6):
+            self._grid_in[i] = {'lat': self._ds[c.YC].isel(**{c.FACEDIM: i}),
+                                'lon': self._ds[c.XC].isel(**{c.FACEDIM: i}),
+                                'lat_b': self._ds[c.YG].isel(**{c.FACEDIM: i}),
+                                'lon_b': self._ds[c.XG].isel(**{c.FACEDIM: i})}
+        try:
+            self.regridder = [
+                xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method=self._method,
+                             **kwargs)
+                for i in range(6)]
+        except AssertionError as e:
+            print(
+                f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
+            self.regridder = [
+                xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method="bilinear",
+                             **kwargs)
+                for i in range(6)]
+
+    def _build_regridder_concat(self, filename, **kwargs):
+        self._grid_in = {'lat': flatten_ds(self._ds[c.YC]),
+                         'lon': flatten_ds(self._ds[c.XC]),
+                         'lat_b': flatten_ds(self._ds[c.YG]),
+                         'lon_b': flatten_ds(self._ds[c.XG])}
+        try:
+            self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method,
+                                          **kwargs)
+        except AssertionError as e:
+            print(
+                f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
+            self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method="bilinear",
+                                          **kwargs)
+
 
     def _build_output_grid(self, d_lon, d_lat):
         grid = xe.util.grid_global(d_lon, d_lat)
@@ -69,27 +97,33 @@ class Regridder:
         grid = init_grid(ds=self._ds)
 
         # We first need interpolate quantites to the cell center (if nescessary)
+        reg_all = np.all(self._ds[c.X].shape != self._ds[c.Xp1].shape)
         for data in set(self._ds.data_vars) - set(to_not_regrid_scalar):
             dims = self._ds[data].dims
-            if "Xp1" in dims and "Yp1" not in dims:
+            if c.Xp1 in dims and c.Yp1 not in dims and reg_all:
                 interp = grid.interp(self._ds[data], to="center", axis="X")
-            elif "Yp1" in dims and "Xp1" not in dims:
+            elif c.Yp1 in dims and c.Xp1 not in dims and reg_all:
                 interp = grid.interp(self._ds[data], to="center", axis="Y")
-            elif "Xp1" in dims and "Yp1" in dims:
+            elif c.Xp1 in dims and c.Yp1 in dims and reg_all:
                 interp = grid.interp(self._ds[data], to="center", axis=["X","Y"])
-            else:
+            elif c.Xp1 not in dims and c.Yp1 not in dims:
                 interp = self._ds[data]
+            else:
+                interp = None
 
             # Do regridding for scalar data
-            ds[data] = self._regrid_wrapper(interp)
+            if interp is not None:
+                ds[data] = self._regrid_wrapper(interp)
+
 
         # Regridding for vectors
         for vector in vector_names:
             try:
                 # interpolate vectors to cell centers:
+
                 interp_UV = grid.interp_2d_vector(vector={"X": self._ds[vector.format("U")], "Y": self._ds[vector.format("V")]}, to="center")
                 # rotate vectors geographic direction:
-                vector_E, vector_N = self._rotate_vector_to_EN(interp_UV["X"], interp_UV["Y"], self._ds["AngleCS"], self._ds["AngleSN"])
+                vector_E, vector_N = self._rotate_vector_to_EN(interp_UV["X"], interp_UV["Y"], self._ds[c.AngleCS], self._ds[c.AngleSN])
                 # perform the regridding:
                 ds[vector.format("U")] = self._regrid_wrapper(vector_E)
                 ds[vector.format("V")] = self._regrid_wrapper(vector_N)
@@ -98,7 +132,7 @@ class Regridder:
 
         # remove the face dimension from the dataset
         try:
-            ds = ds.reset_coords(FACEDIM)
+            ds = ds.reset_coords(c.FACEDIM)
         except ValueError:
             print(
                 "Warning: We could not remove the face dimension! Please check that your input dataset has only face dependencies where they belong.")
@@ -126,15 +160,18 @@ class Regridder:
         elif len(ds_in.shape) == 3:
             data_out = np.zeros([self.grid['lat'].size, self.grid['lon'].size])
         else:
-            if FACEDIM in ds_in.dims:
-                assert np.all(ds_in.isel(**{FACEDIM:0}) == ds_in.isel(**{FACEDIM:1})), "you have a really messed up input dataset!"
+            if c.FACEDIM in ds_in.dims:
+                assert np.all(ds_in.isel(**{c.FACEDIM:0}) == ds_in.isel(**{c.FACEDIM:1})), "you have a really messed up input dataset!"
                 return ds_in[0]
             else:
                 return ds_in
 
-        for i in range(6):
-            # add up the results for 6 tiles
-            data_out += self.regridder[i](ds_in.isel(**{FACEDIM:i}), **kwargs)
+        if self._concat_mode:
+            data_out = self.regridder(flatten_ds(ds_in), **kwargs)
+        else:
+            for i in range(6):
+                # add up the results for 6 tiles
+                data_out += self.regridder[i](ds_in.isel(**{c.FACEDIM:i}), **kwargs)
 
         return data_out
 
@@ -156,8 +193,8 @@ class Regridder:
         vN = AngleSN * U + AngleCS * V
 
         # reorder coordinates:
-        uE = uE.transpose(..., "Y", "X")
-        vN = vN.transpose(..., "Y", "X")
+        uE = uE.transpose(..., c.Y, c.X)
+        vN = vN.transpose(..., c.Y, c.X)
 
         return uE, vN
 

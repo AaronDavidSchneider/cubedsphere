@@ -4,13 +4,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import cm
 
-from .const import FACEDIM
+import cubedsphere.const as c
+from .utils import flatten_ds
 
-def flatten_ds(ds):
-    return xr.concat([ds.isel(**{FACEDIM: i}) for i in range(6)], dim="X")
-
-def flatten_ds_interface(ds):
-    return xr.concat([ds.isel(**{FACEDIM: i}) for i in range(6)], dim="Xp1")
 
 
 def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
@@ -44,14 +40,14 @@ def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
             data = flatten_ds(dr).values
         elif ds["lon_b"].shape[-1] == dr.shape[-1]:
             x_dim = "lon_b"
-            x = flatten_ds_interface(ds[x_dim]).values
-            data = flatten_ds_interface(dr).values
+            x = flatten_ds(ds[x_dim]).values
+            data = flatten_ds(dr).values
         if ds["lat"].shape[-2] == dr.shape[-2]:
             y_dim = "lat"
             y = flatten_ds(ds[y_dim]).values
         elif ds["lat_b"].shape[-2] == dr.shape[-2]:
             y_dim = "lat_b"
-            y = flatten_ds_interface(ds[y_dim]).values
+            y = flatten_ds(ds[y_dim]).values
 
     else:
         x = ds[x_dim].values

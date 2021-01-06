@@ -13,14 +13,14 @@ Work in progress! This library is a collection of tools that I found useful to u
 
 ## ToDo:
 **Postprocessing**:
-- [ ] convert vertical dimensions to physical dimensions
-- [ ] interface `xmitgcm` to enable the use of `.meta` and `.data` files
+- [x] interface `xmitgcm` to enable the use of `.meta` and `.data` files
+- [ ] how do we expand lon_b and lat_b from left to outer?
 
 **Testing**:
 - [ ] compare results with matlab scripts
 
 **Interface**:
-- [ ] which values should be hardcoded?
+- [x] which values should be hardcoded?
 - [ ] special tools needed for exorad?
 
 ## Installation:

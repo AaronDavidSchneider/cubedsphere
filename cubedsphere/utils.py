@@ -2,6 +2,14 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 import f90nml
+import xmitgcm
+import cubedsphere.const as c
+
+def flatten_ds(ds):
+    if c.X in ds.dims:
+        return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.X)
+    else:
+        return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.Xp1)
 
 def read_parameters(outdir):
     """
@@ -45,11 +53,57 @@ def open_mnc_dataset(outdir, iternumber):
     dataset_list.append(xr.concat(grid, dim=range(6)))
 
     ds = xr.merge(dataset_list, compat="override")
-    _rename_dict = {'XC': 'lon',
-                         'XG': 'lon_b',
-                         'YC': 'lat',
-                         'YG': 'lat_b'}
+    _rename_dict = {'XC': c.XC,
+                    'XG': c.XG,
+                    'YC': c.YC,
+                    'YG': c.YG,
+                    'X': c.X,
+                    'Xp1': c.Xp1,
+                    'Y': c.Y,
+                    'Yp1': c.Yp1,
+                    'AngleCS': c.AngleCS,
+                    'AngleSN': c.AngleSN,
+                    'concat_dim': c.FACEDIM,
+                    'HFacC': c.HFacC,
+                    'HFacW': c.HFacW,
+                    'HFacS': c.HFacS,
+                    }
     ds = ds.rename(_rename_dict)
+
+    return ds
+
+def open_ascii_dataset(outdir, iternumber, **kwargs):
+    """
+    Wrapper that opens simulation outputs from standard mitgcm outputs.
+
+    :param outdir:
+    :param iternumber:
+    :param kwargs: everything else that is passed to xmitgcm
+
+    :return:
+    """
+    ds = xmitgcm.open_mdsdataset(data_dir=outdir, iters=iternumber, grid_vars_to_coords=True, geometry="cs", **kwargs).load()
+
+    # You might need to extend this if you plan to change values in const.py!
+    _rename_dict = {'XC': c.XC,
+                    'XG': c.XG,
+                    'YC': c.YC,
+                    'YG': c.YG,
+                    'i': c.X,
+                    'i_g':c.Xp1,
+                    'j':c.Y,
+                    'j_g':c.Yp1,
+                    'CS':c.AngleCS,
+                    'SN':c.AngleSN,
+                    'face':c.FACEDIM,
+                    'hFacC':c.HFacC,
+                    'hFacW':c.HFacW,
+                    'hFacS':c.HFacS,
+                    }
+
+
+    ds = ds.rename(_rename_dict)
+    ds = ds.transpose(c.FACEDIM,...)
 
     return ds
 
