@@ -4,6 +4,7 @@ Library for post processing of MITgcm cubed sphere data
 ## Capabilities:
 - regrid cubed sphere datasets using [`xESMF`](https://xesmf.readthedocs.io/en/latest/) and [`xgcm`](https://xgcm.readthedocs.io/en/latest/)
 - open datasets created by the [`mnc`](https://mitgcm.readthedocs.io/en/latest/outp_pkgs/outp_pkgs.html#netcdf-i-o-pkg-mnc) package
+- open datasets using `xmitgcm` (needs current PR [#98](https://github.com/MITgcm/xmitgcm/pull/98)) 
 - plot original cubed sphere data
 - some more small utilities
 - more to come...
@@ -13,14 +14,14 @@ Work in progress! This library is a collection of tools that I found useful to u
 
 ## ToDo:
 **Postprocessing**:
-- [x] interface `xmitgcm` to enable the use of `.meta` and `.data` files
-- [ ] how do we expand lon_b and lat_b from left to outer?
+- [x] interface `xmitgcm` to enable the use of `.meta` and `.data` files *-> added wrapper*
+- [ ] how do we expand lon_b and lat_b from left to outer for xmitgcm wrapper? 
 
 **Testing**:
 - [ ] compare results with matlab scripts
 
 **Interface**:
-- [x] which values should be hardcoded?
+- [x] which values should be hardcoded? *-> done in const.py*
 - [ ] special tools needed for exorad?
 
 ## Installation:
@@ -82,13 +83,26 @@ U, V = ds_reg["UVEL"].isel(**isel_dict).values, ds_reg["VVEL"].isel(**isel_dict)
 cs.overplot_wind(ds_reg, U, V)
 plt.show()
 ```
-![](docs/theta_reg.png)
+![](docs/temp_reg.png)
 ```python
 # Now also plotting theta without regridding (on the original grid):
 cs.plotCS(ds["THETA"].isel(**isel_dict), ds, mask_size=5)
 plt.show()
 ```
-![](docs/theta_direct.png)
+![](docs/temp_direct.png)
+
+### Tests with xmitgcm:
+See `examples/example_xmitgcm.py`
+![](docs/temp_ascii_reg.png)
+
+We miss the boundary values, since xmitgcm only gives the left corner coordinates, but not the outer coordinates. 
+
+### Tests with xmitgcm and concat mode:
+concat mode means that instead of regridding each face individually and summing up the results, we first concatenate the ds along the X dimension and regrid on the flattened dataset afterwards.
+See `examples/example_xmitgcm_concat.py`
+![](docs/temp_ascii_concat_reg.png)
+
+This does not yet work!
 
 ## Credits
 Many of the methods come from: https://github.com/JiaweiZhuang/cubedsphere

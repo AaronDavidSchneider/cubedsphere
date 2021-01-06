@@ -24,10 +24,10 @@ ds_reg["T"].isel(**isel_dict).plot(vmin=260,vmax=312)
 # do some basic plotting to demonstrate the dataset
 U, V = ds_reg["U"].isel(**isel_dict).values, ds_reg["V"].isel(**isel_dict).values
 cs.overplot_wind(ds_reg, U, V)
-plt.savefig("../docs/theta_ascii_reg.png")
+plt.savefig("../docs/temp_ascii_reg.png")
 plt.show()
 
 # Now also plotting theta without regridding (on the original grid):
 cs.plotCS(ds_ascii["T"].isel(**isel_dict), ds_ascii, mask_size=5)
-plt.savefig("../docs/theta_ascii_direct.png")
+plt.savefig("../docs/temp_ascii_direct.png")
 plt.show()

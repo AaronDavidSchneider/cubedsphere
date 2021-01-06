@@ -3,30 +3,31 @@ import cubedsphere as cs
 import time
 
 # Specify directory where the output files can be found
-outdir = "/Volumes/SCRATCH/sim_output/xmitgcm_test/nc_test"
+outdir_ascii = "/Users/schneider/codes/MITgcm/verification/tutorial_held_suarez_cs/run"
 
 # open Dataset
-ds = cs.open_mnc_dataset(outdir, 276480)
+ds_ascii = cs.open_ascii_dataset(outdir_ascii, iternumber=276480)
 
 # regrid dataset
 t = time.time()
-regridder = cs.Regridder(ds, 5, 4, reuse_weights=False, filename="weights", concat_mode=False)
+regridder = cs.Regridder(ds_ascii, 5, 4, reuse_weights=False, filename="weights", concat_mode=True)
 # Note: once weights were created, we can also reuse files by using reuse_weights=True (saves time).
+# Note: to test the concat mode, we can also use concat_mode=True
 ds_reg = regridder.regrid()
 print(f"time needed to regrid dataset: {time.time()-t}")
 
 # do some basic plotting to demonstrate the dataset
 # determine which timestep and Z to use:
-isel_dict = {"T":0,"Z":0}
+isel_dict = {"time":0,"k":0}
+ds_reg["T"].isel(**isel_dict).plot(vmin=260,vmax=312)
 
 # do some basic plotting to demonstrate the dataset
-ds_reg["Temp"].isel(**isel_dict).plot(vmin=260,vmax=312)
 U, V = ds_reg["U"].isel(**isel_dict).values, ds_reg["V"].isel(**isel_dict).values
 cs.overplot_wind(ds_reg, U, V)
-plt.savefig("../docs/temp_reg.png")
+plt.savefig("../docs/temp_ascii_concat_reg.png")
 plt.show()
 
 # Now also plotting theta without regridding (on the original grid):
-cs.plotCS(ds["Temp"].isel(**isel_dict), ds, mask_size=5)
-plt.savefig("../docs/temp_direct.png")
+cs.plotCS(ds_ascii["T"].isel(**isel_dict), ds_ascii, mask_size=5)
+plt.savefig("../docs/temp_ascii_concat_direct.png")
 plt.show()
