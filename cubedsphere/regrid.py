@@ -39,12 +39,12 @@ class Regridder:
 
     def _build_regridder_faces(self, filename, **kwargs):
         self._grid_in = [None] * 6
-        for i in range(6):
-            self._grid_in[i] = {'lat': self._ds[c.YC].isel(**{c.FACEDIM: i}),
-                                'lon': self._ds[c.XC].isel(**{c.FACEDIM: i}),
-                                'lat_b': self._ds[c.YG].isel(**{c.FACEDIM: i}),
-                                'lon_b': self._ds[c.XG].isel(**{c.FACEDIM: i})}
         try:
+            for i in range(6):
+                self._grid_in[i] = {'lat': self._ds[c.YC].isel(**{c.FACEDIM: i}),
+                                    'lon': self._ds[c.XC].isel(**{c.FACEDIM: i}),
+                                    'lat_b': self._ds[c.YG].isel(**{c.FACEDIM: i}),
+                                    'lon_b': self._ds[c.XG].isel(**{c.FACEDIM: i})}
             self.regridder = [
                 xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method=self._method,
                              **kwargs)
@@ -52,22 +52,27 @@ class Regridder:
         except AssertionError as e:
             print(
                 f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
+            for i in range(6):
+                self._grid_in[i] = {'lat': self._ds[c.YC].isel(**{c.FACEDIM: i}),
+                                    'lon': self._ds[c.XC].isel(**{c.FACEDIM: i})}
             self.regridder = [
                 xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method="bilinear",
                              **kwargs)
                 for i in range(6)]
 
     def _build_regridder_concat(self, filename, **kwargs):
-        self._grid_in = {'lat': flatten_ds(self._ds[c.YC]),
-                         'lon': flatten_ds(self._ds[c.XC]),
-                         'lat_b': flatten_ds(self._ds[c.YG]),
-                         'lon_b': flatten_ds(self._ds[c.XG])}
         try:
+            self._grid_in = {'lat': flatten_ds(self._ds[c.YC]),
+                             'lon': flatten_ds(self._ds[c.XC]),
+                             'lat_b': flatten_ds(self._ds[c.YG]),
+                             'lon_b': flatten_ds(self._ds[c.XG])}
             self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method,
                                           **kwargs)
         except AssertionError as e:
             print(
                 f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
+            self._grid_in = {'lat': flatten_ds(self._ds[c.YC]),
+                             'lon': flatten_ds(self._ds[c.XC])}
             self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method="bilinear",
                                           **kwargs)
 

@@ -6,7 +6,7 @@ import cubedsphere.const as c
 
 import os
 
-def init_grid(grid_dir=None, ds=None):
+def init_grid(grid_dir=None, ds=None, **kwargs):
     """
 
     :param grid_dir: direction where the grid can be found (optional)
@@ -58,5 +58,5 @@ def init_grid(grid_dir=None, ds=None):
         ('X', 'Y'): [c.rA, c.rAz, c.rAs, c.rAw]  # Areas
     }
 
-    grid = xgcm.Grid(grid_nc, face_connections=face_connections, coords=coords, periodic=['X', 'Y'], metrics=metrics)
+    grid = xgcm.Grid(grid_nc, face_connections=face_connections, coords=coords, periodic=['X', 'Y'], metrics=metrics, **kwargs)
     return grid

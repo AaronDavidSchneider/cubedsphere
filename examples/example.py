@@ -20,13 +20,17 @@ print(f"time needed to regrid dataset: {time.time()-t}")
 isel_dict = {"T":0,"Z":0}
 
 # do some basic plotting to demonstrate the dataset
-ds_reg["Temp"].isel(**isel_dict).plot(vmin=260,vmax=312)
+fig = plt.figure(figsize=(8,6), constrained_layout=True)
+ds_reg["Temp"].isel(**isel_dict).plot(vmin=260,vmax=312, add_colorbar=False)
 U, V = ds_reg["U"].isel(**isel_dict).values, ds_reg["V"].isel(**isel_dict).values
 cs.overplot_wind(ds_reg, U, V)
+plt.gca().set_aspect('equal')
 plt.savefig("../docs/temp_reg.png")
 plt.show()
 
 # Now also plotting theta without regridding (on the original grid):
-cs.plotCS(ds["Temp"].isel(**isel_dict), ds, mask_size=5)
+fig = plt.figure(figsize=(8,6), constrained_layout=True)
+cs.plotCS(ds["Temp"].isel(**isel_dict), ds, mask_size=5, vmin=260,vmax=312)
+plt.gca().set_aspect('equal')
 plt.savefig("../docs/temp_direct.png")
 plt.show()
