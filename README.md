@@ -4,7 +4,7 @@ Library for post processing of MITgcm cubed sphere data
 ## Capabilities:
 - regrid cubed sphere datasets using [`xESMF`](https://xesmf.readthedocs.io/en/latest/) and [`xgcm`](https://xgcm.readthedocs.io/en/latest/)
 - open datasets created by the [`mnc`](https://mitgcm.readthedocs.io/en/latest/outp_pkgs/outp_pkgs.html#netcdf-i-o-pkg-mnc) package
-- open datasets using `xmitgcm` (needs current PR [#98](https://github.com/MITgcm/xmitgcm/pull/98)) 
+- open datasets using [`xmitgcm`](https://xmitgcm.readthedocs.io/en/latest/) (needs current PR [#98](https://github.com/MITgcm/xmitgcm/pull/98)) 
 - plot original cubed sphere data
 - some more small utilities
 - more to come...
