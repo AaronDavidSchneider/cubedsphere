@@ -6,10 +6,10 @@ import xmitgcm
 import cubedsphere.const as c
 
 def flatten_ds(ds):
-    if c.X in ds.dims:
-        return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.X)
+    if c.i in ds.dims:
+        return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.i)
     else:
-        return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.Xp1)
+        return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.i_g)
 
 def read_parameters(outdir):
     """
@@ -54,20 +54,36 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
     dataset_list.append(xr.concat(grid, dim=range(6)))
 
     ds = xr.merge(dataset_list, compat="override")
-    _rename_dict = {'XC': c.XC,
-                    'XG': c.XG,
-                    'YC': c.YC,
-                    'YG': c.YG,
-                    'X': c.X,
-                    'Xp1': c.Xp1,
-                    'Y': c.Y,
-                    'Yp1': c.Yp1,
+    _rename_dict = {'XC': c.lon,
+                    'XG': c.lon_b,
+                    'YC': c.lat,
+                    'YG': c.lat_b,
+                    'X': c.i,
+                    'Xp1': c.i_g,
+                    'Y': c.j,
+                    'Yp1': c.j_g,
                     'AngleCS': c.AngleCS,
                     'AngleSN': c.AngleSN,
                     'concat_dim': c.FACEDIM,
                     'HFacC': c.HFacC,
                     'HFacW': c.HFacW,
                     'HFacS': c.HFacS,
+                    'Z': c.k,
+                    'Zu': c.k_u,
+                    'Zl': c.k_l,
+                    'Zp1': c.k_p1,
+                    'T':c.time,
+                    'drF': c.drF,
+                    'drC': c.drC,
+                    'dxC': c.dxC,
+                    'dxG': c.dxG,
+                    'dyC': c.dyC,
+                    'dyG': c.dyG,
+                    'rA': c.rA,
+                    'rAz': c.rAz,
+                    'rAs': c.rAs,
+                    'rAw': c.rAw,
+                    'Temp': c.T
                     }
     ds = ds.rename(_rename_dict)
 
@@ -86,22 +102,37 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
     ds = xmitgcm.open_mdsdataset(data_dir=outdir, iters=iternumber, grid_vars_to_coords=True, geometry="cs", **kwargs).load()
 
     # You might need to extend this if you plan to change values in const.py!
-    _rename_dict = {'XC': c.XC,
-                    'XG': c.XG,
-                    'YC': c.YC,
-                    'YG': c.YG,
-                    'i': c.X,
-                    'i_g':c.Xp1,
-                    'j':c.Y,
-                    'j_g':c.Yp1,
+    _rename_dict = {'XC': c.lon,
+                    'XG': c.lon_b,
+                    'YC': c.lat,
+                    'YG': c.lat_b,
+                    'i': c.i,
+                    'i_g':c.i_g,
+                    'j':c.j,
+                    'j_g':c.j_g,
                     'CS':c.AngleCS,
                     'SN':c.AngleSN,
                     'face':c.FACEDIM,
                     'hFacC':c.HFacC,
                     'hFacW':c.HFacW,
                     'hFacS':c.HFacS,
+                    'time':c.time,
+                    'k':c.k,
+                    'k_u':c.k_u,
+                    'k_l':c.k_l,
+                    'k_p1':c.k_p1,
+                    'drF':c.drF,
+                    'drC':c.drC,
+                    'dxC':c.dxC,
+                    'dxG':c.dxG,
+                    'dyC': c.dyC,
+                    'dyG': c.dyG,
+                    'rA':c.rA,
+                    'rAz':c.rAz,
+                    'rAs': c.rAs,
+                    'rAw': c.rAw,
+                    'T':c.T
                     }
-
 
     ds = ds.rename(_rename_dict)
     ds = ds.transpose(c.FACEDIM,...)

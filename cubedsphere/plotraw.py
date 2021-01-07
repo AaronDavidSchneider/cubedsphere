@@ -31,22 +31,22 @@ def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
     # must convert xarray objects to raw numpy arrays
     # otherwise numpy masking functions won't work
 
-    x_dim, y_dim = "lon", "lat"
+    x_dim, y_dim = c.lon, c.lat
 
-    if len(ds["lon"].shape) > 2:
-        if ds["lon"].shape[-1] == dr.shape[-1]:
-            x_dim = "lon"
+    if len(ds[c.lon].shape) > 2:
+        if ds[c.lon].shape[-1] == dr.shape[-1]:
+            x_dim = c.lon
             x = flatten_ds(ds[x_dim]).values
             data = flatten_ds(dr).values
-        elif ds["lon_b"].shape[-1] == dr.shape[-1]:
-            x_dim = "lon_b"
+        elif ds[c.lon_b].shape[-1] == dr.shape[-1]:
+            x_dim = c.lon_b
             x = flatten_ds(ds[x_dim]).values
             data = flatten_ds(dr).values
-        if ds["lat"].shape[-2] == dr.shape[-2]:
-            y_dim = "lat"
+        if ds[c.lat].shape[-2] == dr.shape[-2]:
+            y_dim = c.lat
             y = flatten_ds(ds[y_dim]).values
-        elif ds["lat_b"].shape[-2] == dr.shape[-2]:
-            y_dim = "lat_b"
+        elif ds[c.lat_b].shape[-2] == dr.shape[-2]:
+            y_dim = c.lat_b
             y = flatten_ds(ds[y_dim]).values
 
     else:

@@ -23,40 +23,40 @@ def init_grid(grid_dir=None, ds=None, **kwargs):
         raise TypeError("you need to specify ds or grid_dir")
 
     face_connections = {c.FACEDIM:
-                            {0: {'X': ((4, c.Y, False), (1, c.X, False)),
-                                 'Y': ((5, c.Y, False), (2, c.X, False))},
-                             1: {'X': ((0, c.X, False), (3, c.Y, False)),
-                                 'Y': ((5, c.X, False), (2, c.Y, False))},
-                             2: {'X': ((0, c.Y, False), (3, c.X, False)),
-                                 'Y': ((1, c.Y, False), (4, c.X, False))},
-                             3: {'X': ((2, c.X, False), (5, c.Y, False)),
-                                 'Y': ((1, c.X, False), (4, c.Y, False))},
-                             4: {'X': ((2, c.Y, False), (5, c.X, False)),
-                                 'Y': ((3, c.Y, False), (0, c.X, False))},
-                             5: {'X': ((4, c.X, False), (1, c.Y, False)),
-                                 'Y': ((3, c.X, False), (0, c.Y, False))}}}
+                            {0: {c.i: ((4, c.j, False), (1, c.i, False)),
+                                 c.j: ((5, c.j, False), (2, c.i, False))},
+                             1: {c.i: ((0, c.i, False), (3, c.j, False)),
+                                 c.j: ((5, c.i, False), (2, c.j, False))},
+                             2: {c.i: ((0, c.j, False), (3, c.i, False)),
+                                 c.j: ((1, c.j, False), (4, c.i, False))},
+                             3: {c.i: ((2, c.i, False), (5, c.j, False)),
+                                 c.j: ((1, c.i, False), (4, c.j, False))},
+                             4: {c.i: ((2, c.j, False), (5, c.i, False)),
+                                 c.j: ((3, c.j, False), (0, c.i, False))},
+                             5: {c.i: ((4, c.i, False), (1, c.j, False)),
+                                 c.j: ((3, c.i, False), (0, c.j, False))}}}
 
-    if np.all(grid_nc[c.X].shape == grid_nc[c.Xp1].shape) and grid_nc[c.Xp1].attrs.get("c_grid_axis_shift")==-0.5:
+    if np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift")==-0.5:
         # We might have left values here
-        coords = {'X': {'center': c.X, 'left': c.Xp1}, 'Y': {'center': c.Y, 'left': c.Yp1}, 'T': {'center': c.T},
-                  'Z': {'center': c.Z, 'left': c.Zl}}
-    elif np.all(grid_nc[c.X].shape == grid_nc[c.Xp1].shape) and grid_nc[c.Xp1].attrs.get("c_grid_axis_shift")==+0.5:
+        coords = {c.i: {'center': c.i, 'left': c.i_g}, c.j: {'center': c.j, 'left': c.j_g}, c.time: {'center': c.time},
+                  c.k: {'center': c.k, 'left': c.k_l}}
+    elif np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift")==+0.5:
         # We might have left values here
-        coords = {'X': {'center': c.X, 'right': c.Xp1}, 'Y': {'center': c.Y, 'right': c.Yp1}, 'T': {'center': c.T},
-                  'Z': {'center': c.Z, 'left': c.Zl}}
+        coords = {c.i: {'center': c.i, 'right': c.i_g}, c.j: {'center': c.j, 'right': c.j_g}, c.time: {'center': c.time},
+                  c.k: {'center': c.k, 'left': c.k_l}}
     else:
-        coords = {'X': {'center': c.X, 'outer': c.Xp1}, 'Y': {'center': c.Y, 'outer': c.Yp1}, 'T': {'center': c.T},
-                  'Z': {'center': c.Z, 'left': c.Zl}}
+        coords = {c.i: {'center': c.i, 'outer': c.i_g}, c.j: {'center': c.j, 'outer': c.j_g}, c.time: {'center': c.time},
+                  c.k: {'center': c.k, 'left': c.k_l}}
 
     grid_nc[c.drW] = grid_nc[c.HFacW] * grid_nc[c.drF]  # vertical cell size at u point
     grid_nc[c.drS] = grid_nc[c.HFacS] * grid_nc[c.drF]  # vertical cell size at v point
     grid_nc[c.drC] = grid_nc[c.HFacC] * grid_nc[c.drF]  # vertical cell size at tracer point
     metrics = {
-        ('X',): [c.dxC, c.dxG],  # X distances
-        ('Y',): [c.dyC, c.dyG],  # Y distances
-        ('Z',): [c.drW, c.drS, c.drC],  # Z distances
-        ('X', 'Y'): [c.rA, c.rAz, c.rAs, c.rAw]  # Areas
+        (c.i,): [c.dxC, c.dxG],  # X distances
+        (c.j,): [c.dyC, c.dyG],  # Y distances
+        (c.k,): [c.drW, c.drS, c.drC],  # Z distances
+        (c.i, c.j): [c.rA, c.rAz, c.rAs, c.rAw]  # Areas
     }
 
-    grid = xgcm.Grid(grid_nc, face_connections=face_connections, coords=coords, periodic=['X', 'Y'], metrics=metrics, **kwargs)
+    grid = xgcm.Grid(grid_nc, face_connections=face_connections, coords=coords, periodic=[c.i, c.j], metrics=metrics, **kwargs)
     return grid

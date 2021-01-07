@@ -59,10 +59,10 @@ class Regridder:
         self._grid_in = [None] * 6
         try:
             for i in range(6):
-                self._grid_in[i] = {'lat': self._ds_grid_in[c.YC].isel(**{c.FACEDIM: i}),
-                                    'lon': self._ds_grid_in[c.XC].isel(**{c.FACEDIM: i}),
-                                    'lat_b': self._ds_grid_in[c.YG].isel(**{c.FACEDIM: i}),
-                                    'lon_b': self._ds_grid_in[c.XG].isel(**{c.FACEDIM: i})}
+                self._grid_in[i] = {'lat': self._ds_grid_in[c.lat].isel(**{c.FACEDIM: i}),
+                                    'lon': self._ds_grid_in[c.lon].isel(**{c.FACEDIM: i}),
+                                    'lat_b': self._ds_grid_in[c.lat_b].isel(**{c.FACEDIM: i}),
+                                    'lon_b': self._ds_grid_in[c.lon_b].isel(**{c.FACEDIM: i})}
             self.regridder = [
                 xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method=self._method,
                              **kwargs)
@@ -71,8 +71,8 @@ class Regridder:
             print(
                 f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
             for i in range(6):
-                self._grid_in[i] = {'lat': self._ds_grid_in[c.YC].isel(**{c.FACEDIM: i}),
-                                    'lon': self._ds_grid_in[c.XC].isel(**{c.FACEDIM: i})}
+                self._grid_in[i] = {'lat': self._ds_grid_in[c.lat].isel(**{c.FACEDIM: i}),
+                                    'lon': self._ds_grid_in[c.lon].isel(**{c.FACEDIM: i})}
             self.regridder = [
                 xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method="bilinear",
                              **kwargs)
@@ -81,17 +81,17 @@ class Regridder:
 
     def _build_regridder_concat(self, filename, **kwargs):
         try:
-            self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.YC]),
-                             'lon': flatten_ds(self._ds_grid_in[c.XC]),
-                             'lat_b': flatten_ds(self._ds_grid_in[c.YG]),
-                             'lon_b': flatten_ds(self._ds_grid_in[c.XG])}
+            self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.lat]),
+                             'lon': flatten_ds(self._ds_grid_in[c.lon]),
+                             'lat_b': flatten_ds(self._ds_grid_in[c.lat_b]),
+                             'lon_b': flatten_ds(self._ds_grid_in[c.lon_b])}
             self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method,
                                           **kwargs)
         except AssertionError as e:
             print(
                 f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
-            self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.YC]),
-                             'lon': flatten_ds(self._ds_grid_in[c.XC])}
+            self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.lat]),
+                             'lon': flatten_ds(self._ds_grid_in[c.lon])}
             self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method="bilinear",
                                           **kwargs)
             self._method = "bilinear"
@@ -120,22 +120,22 @@ class Regridder:
             vector_names = ["{}VEL", "{}", "{}VELSQ", "{}THMASS"]
 
         _all_vectors = [vector.format(direction) for direction in ["U","V"] for vector in vector_names]
-        to_not_regrid_scalar = ["lon_b", "lat_b", "lon", "lat"] + _all_vectors
+        to_not_regrid_scalar = [c.lon_b, c.lon, c.lat_b, c.lat] + _all_vectors
 
         # init grid to interp edge quantities to center
         grid = init_grid(ds=self._ds)
 
         # We first need interpolate quantites to the cell center (if nescessary)
-        reg_all = np.all(self._ds[c.X].shape != self._ds[c.Xp1].shape)
+        reg_all = np.all(self._ds[c.i].shape != self._ds[c.i_g].shape)
         for data in set(self._ds.data_vars) - set(to_not_regrid_scalar):
             dims = self._ds[data].dims
-            if c.Xp1 in dims and c.Yp1 not in dims and reg_all:
-                interp = grid.interp(self._ds[data], to="center", axis="X")
-            elif c.Yp1 in dims and c.Xp1 not in dims and reg_all:
-                interp = grid.interp(self._ds[data], to="center", axis="Y")
-            elif c.Xp1 in dims and c.Yp1 in dims and reg_all:
-                interp = grid.interp(self._ds[data], to="center", axis=["X","Y"])
-            elif c.Xp1 not in dims and c.Yp1 not in dims:
+            if c.i_g in dims and c.j_g not in dims and reg_all:
+                interp = grid.interp(self._ds[data], to="center", axis=c.i)
+            elif c.j_g in dims and c.i_g not in dims and reg_all:
+                interp = grid.interp(self._ds[data], to="center", axis=c.j)
+            elif c.i_g in dims and c.j_g in dims and reg_all:
+                interp = grid.interp(self._ds[data], to="center", axis=[c.i, c.j])
+            elif c.i_g not in dims and c.j_g not in dims:
                 interp = self._ds[data]
             else:
                 interp = None
@@ -149,9 +149,9 @@ class Regridder:
         for vector in vector_names:
             try:
                 # interpolate vectors to cell centers:
-                interp_UV = grid.interp_2d_vector(vector={"X": self._ds[vector.format("U")], "Y": self._ds[vector.format("V")]}, to="center")
+                interp_UV = grid.interp_2d_vector(vector={c.i: self._ds[vector.format("U")], c.j: self._ds[vector.format("V")]}, to="center")
                 # rotate vectors geographic direction:
-                vector_E, vector_N = self._rotate_vector_to_EN(interp_UV["X"], interp_UV["Y"], self._ds[c.AngleCS], self._ds[c.AngleSN])
+                vector_E, vector_N = self._rotate_vector_to_EN(interp_UV[c.i], interp_UV[c.j], self._ds[c.AngleCS], self._ds[c.AngleSN])
                 # perform the regridding:
                 ds[vector.format("U")] = self._regrid_wrapper(vector_E, **kwargs)
                 ds[vector.format("V")] = self._regrid_wrapper(vector_N, **kwargs)
@@ -221,8 +221,8 @@ class Regridder:
         vN = AngleSN * U + AngleCS * V
 
         # reorder coordinates:
-        uE = uE.transpose(..., c.Y, c.X)
-        vN = vN.transpose(..., c.Y, c.X)
+        uE = uE.transpose(..., c.j, c.i)
+        vN = vN.transpose(..., c.j, c.i)
 
         return uE, vN
 
