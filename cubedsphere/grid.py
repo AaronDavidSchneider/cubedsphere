@@ -6,7 +6,7 @@ import cubedsphere.const as c
 
 import os
 
-def init_grid(grid_dir=None, ds=None, **kwargs):
+def init_grid_CS(ds=None, grid_dir=None, **kwargs):
     """
 
     :param grid_dir: direction where the grid can be found (optional)
@@ -39,14 +39,14 @@ def init_grid(grid_dir=None, ds=None, **kwargs):
     if np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift")==-0.5:
         # We might have left values here
         coords = {c.i: {'center': c.i, 'left': c.i_g}, c.j: {'center': c.j, 'left': c.j_g}, c.time: {'center': c.time},
-                  c.k: {'center': c.k, 'left': c.k_l}}
+                  c.k: {'center': c.k, 'left': c.k_l, 'right': c.k_u, 'outer': c.k_p1}}
     elif np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift")==+0.5:
         # We might have left values here
         coords = {c.i: {'center': c.i, 'right': c.i_g}, c.j: {'center': c.j, 'right': c.j_g}, c.time: {'center': c.time},
-                  c.k: {'center': c.k, 'left': c.k_l}}
+                  c.k: {'center': c.k, 'left': c.k_l, 'right': c.k_u, 'outer': c.k_p1}}
     else:
         coords = {c.i: {'center': c.i, 'outer': c.i_g}, c.j: {'center': c.j, 'outer': c.j_g}, c.time: {'center': c.time},
-                  c.k: {'center': c.k, 'left': c.k_l}}
+                  c.k: {'center': c.k, 'left': c.k_l, 'right': c.k_u, 'outer': c.k_p1}}
 
     grid_nc[c.drW] = grid_nc[c.HFacW] * grid_nc[c.drF]  # vertical cell size at u point
     grid_nc[c.drS] = grid_nc[c.HFacS] * grid_nc[c.drF]  # vertical cell size at v point
@@ -59,4 +59,25 @@ def init_grid(grid_dir=None, ds=None, **kwargs):
     }
 
     grid = xgcm.Grid(grid_nc, face_connections=face_connections, coords=coords, periodic=[c.i, c.j], metrics=metrics, **kwargs)
+    return grid
+
+def init_grid_LL(ds=None, grid_dir=None, **kwargs):
+    """
+
+        :param grid_dir: direction where the grid can be found (optional)
+        :param ds: dataset that contains the grid (optional)
+        :return:
+        """
+    if grid_dir is not None:
+        grid_files = os.path.join(grid_dir, "grid.t{:03d}.nc")
+        grid_list = [xr.open_dataset(grid_files.format(i)) for i in range(1, 7)]
+        grid_nc = xr.concat(grid_list, dim=range(6))
+    elif ds is not None:
+        grid_nc = ds
+    else:
+        raise TypeError("you need to specify ds or grid_dir")
+
+    coords = {c.lon: {'center': c.lon}, c.lat: {'center': c.lat}, c.time: {'center': c.time},
+              c.k: {'center': c.k, 'left': c.k_l, 'right': c.k_u, 'outer': c.k_p1}}
+    grid = xgcm.Grid(grid_nc, periodic=[c.i, c.j], coords=coords, **kwargs)
     return grid

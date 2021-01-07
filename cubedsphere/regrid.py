@@ -7,7 +7,7 @@ import numpy as np
 import warnings
 import time
 import cubedsphere.const as c
-from .grid import init_grid
+from .grid import init_grid_CS
 from .utils import flatten_ds
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -120,10 +120,18 @@ class Regridder:
             vector_names = ["{}VEL", "{}", "{}VELSQ", "{}THMASS"]
 
         _all_vectors = [vector.format(direction) for direction in ["U","V"] for vector in vector_names]
-        to_not_regrid_scalar = [c.lon_b, c.lon, c.lat_b, c.lat] + _all_vectors
+
+        # We do not want to regrid grid values
+        to_not_regrid_scalar = [c.lon_b, c.lon, c.lat_b, c.lat, c.drF, c.drC, c.drS, c.dxG, c.dxC, c.drW, c.dyC, c.dyG,
+                                c.dxF, c.dyU, c.dxV, c.dyF,
+                                c.HFacC, c.HFacW, c.HFacS, c.rAz, c.rA, c.rAw, c.rAs, c.AngleSN,
+                                c.AngleCS]
+
+        # We need to rotate scalar values first
+        to_not_regrid_scalar = to_not_regrid_scalar + _all_vectors
 
         # init grid to interp edge quantities to center
-        grid = init_grid(ds=self._ds)
+        grid = init_grid_CS(ds=self._ds)
 
         # We first need interpolate quantites to the cell center (if nescessary)
         reg_all = np.all(self._ds[c.i].shape != self._ds[c.i_g].shape)
