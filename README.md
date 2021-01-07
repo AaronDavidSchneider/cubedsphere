@@ -93,13 +93,20 @@ plt.show()
 
 ### Tests with xmitgcm:
 See `examples/example_xmitgcm.py`
+
 ![](docs/temp_ascii_reg.png)
 
-We miss the boundary values, since xmitgcm only gives the left corner coordinates, but not the outer coordinates. 
+We miss the boundary values, since xmitgcm only gives the left corner coordinates, but not the outer coordinates, which would be needed for conservative regridding with xESMF<br>
+We can fix this by using the grid files from the mnc dataset:
+
+![](docs/temp_ascii_input_grid_reg.png)
+
+In the future we will use `xmitgcm.utils.get_grid_from_input` function instead
 
 ### Tests with xmitgcm and concat mode:
 concat mode means that instead of regridding each face individually and summing up the results, we first concatenate the ds along the X dimension and regrid on the flattened dataset afterwards.
 See `examples/example_xmitgcm_concat.py`
+
 ![](docs/temp_ascii_concat_reg.png)
 
 This does not yet work!

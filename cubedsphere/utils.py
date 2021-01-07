@@ -30,19 +30,20 @@ def read_parameters(outdir):
 
     return deltaT
 
-def open_mnc_dataset(outdir, iternumber):
+def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "dynDiag", "surfDiag"]):
     """
     Wrapper that opens simulation outputs from mnc outputs.
 
-    :param outdir:
-    :param iternumber:
+    :param outdir: Output directory
+    :param iternumber: iteration number of output file
+    :param fname_list: List of NetCDF file prefixes to read (no need to specify grid files here)
 
     :return:
     """
     # read_parameters(outdir)
 
     dataset_list = []
-    for fname in ["state", "secmomDiag", "dynDiag", "surfDiag"]:
+    for fname in fname_list:
         dataset = [xr.open_dataset("{}/{}.{:010d}.t{:03d}.nc".format(outdir, fname, iternumber, i)) for i in range(1, 7)]
         dataset_list.append(xr.concat(dataset, dim=range(6)))
 
@@ -76,8 +77,8 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
     """
     Wrapper that opens simulation outputs from standard mitgcm outputs.
 
-    :param outdir:
-    :param iternumber:
+     :param outdir: Output directory
+    :param iternumber: See xmitgcm iters, can be a iterationnumber or 'all'
     :param kwargs: everything else that is passed to xmitgcm
 
     :return:

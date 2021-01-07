@@ -5,28 +5,39 @@ import xesmf as xe
 import xarray as xr
 import numpy as np
 import warnings
+import time
 import cubedsphere.const as c
 from .grid import init_grid
 from .utils import flatten_ds
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=UserWarning)
 
 
 class Regridder:
-    def __init__(self, ds, d_lon=5, d_lat=4, concat_mode=True, filename="weights", method='conservative', **kwargs):
+    def __init__(self, ds, d_lon=5, d_lat=4, input_grid=None, concat_mode=False, filename="weights", method='conservative', **kwargs):
         """
         Build the regridder objects (one for each face).
 
         :param ds: dataset to be regridded. Dataset must contain grid information.
         :param d_lon: Longitude step size, i.e. grid resolution.
         :param d_lat: Latitude step size, i.e. grid resolution.
+        :param input_grid: use input grid different to ds. Caution with this practice!
         :param concat_mode: use one regridding instance instead of one regridder for each face
         :param filename: filename for weights (weights will be name filename(+ _tile{i}).nc)
         :param method: Regridding method. See xe.Regridder for options.
         :param kwargs: Optional parameters that are passed to xe.Regridder (see xe.Regridder for options).
         """
-
+        t = time.time()
         self._ds = ds
+        if input_grid is None:
+            self._ds_grid_in = self._ds
+        else:
+            self._ds_grid_in = input_grid
+            if input_grid!=self._ds:
+                print(
+                    "Caution: You chose to use an input grid that is different from the dataset to be regridded,\n"
+                    "Only do so, if you are really sure that the input_grid matches!\n")
 
         self.grid = self._build_output_grid(d_lon, d_lat)
         self._method = method
@@ -37,14 +48,21 @@ class Regridder:
         else:
             self._build_regridder_faces(filename, **kwargs)
 
+        print(f"time needed to build regridder: {time.time() - t}")
+        print(f"Regridder will use {self._method} method")
+        if self._method not in ["patch","conservative"]:
+            print("Caution: The regridding method that you chose might not conserve fluxes")
+        if self._method not in ["conservative"]:
+            print("Caution: The regridding method that you chose might return 0's on borders, double check by plotting the dataset")
+
     def _build_regridder_faces(self, filename, **kwargs):
         self._grid_in = [None] * 6
         try:
             for i in range(6):
-                self._grid_in[i] = {'lat': self._ds[c.YC].isel(**{c.FACEDIM: i}),
-                                    'lon': self._ds[c.XC].isel(**{c.FACEDIM: i}),
-                                    'lat_b': self._ds[c.YG].isel(**{c.FACEDIM: i}),
-                                    'lon_b': self._ds[c.XG].isel(**{c.FACEDIM: i})}
+                self._grid_in[i] = {'lat': self._ds_grid_in[c.YC].isel(**{c.FACEDIM: i}),
+                                    'lon': self._ds_grid_in[c.XC].isel(**{c.FACEDIM: i}),
+                                    'lat_b': self._ds_grid_in[c.YG].isel(**{c.FACEDIM: i}),
+                                    'lon_b': self._ds_grid_in[c.XG].isel(**{c.FACEDIM: i})}
             self.regridder = [
                 xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method=self._method,
                              **kwargs)
@@ -53,28 +71,30 @@ class Regridder:
             print(
                 f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
             for i in range(6):
-                self._grid_in[i] = {'lat': self._ds[c.YC].isel(**{c.FACEDIM: i}),
-                                    'lon': self._ds[c.XC].isel(**{c.FACEDIM: i})}
+                self._grid_in[i] = {'lat': self._ds_grid_in[c.YC].isel(**{c.FACEDIM: i}),
+                                    'lon': self._ds_grid_in[c.XC].isel(**{c.FACEDIM: i})}
             self.regridder = [
                 xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method="bilinear",
                              **kwargs)
                 for i in range(6)]
+            self._method = "bilinear"
 
     def _build_regridder_concat(self, filename, **kwargs):
         try:
-            self._grid_in = {'lat': flatten_ds(self._ds[c.YC]),
-                             'lon': flatten_ds(self._ds[c.XC]),
-                             'lat_b': flatten_ds(self._ds[c.YG]),
-                             'lon_b': flatten_ds(self._ds[c.XG])}
+            self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.YC]),
+                             'lon': flatten_ds(self._ds_grid_in[c.XC]),
+                             'lat_b': flatten_ds(self._ds_grid_in[c.YG]),
+                             'lon_b': flatten_ds(self._ds_grid_in[c.XG])}
             self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method,
                                           **kwargs)
         except AssertionError as e:
             print(
                 f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
-            self._grid_in = {'lat': flatten_ds(self._ds[c.YC]),
-                             'lon': flatten_ds(self._ds[c.XC])}
+            self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.YC]),
+                             'lon': flatten_ds(self._ds_grid_in[c.XC])}
             self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method="bilinear",
                                           **kwargs)
+            self._method = "bilinear"
 
 
     def _build_output_grid(self, d_lon, d_lat):
@@ -83,9 +103,11 @@ class Regridder:
                    'lat_b': grid["lat_b"][:, 0].values, 'lon_b': grid["lon_b"][0, :].values}
         return grid_LL
 
-    def regrid(self):
+    def regrid(self, vector_names = None, **kwargs):
         """
         Wrapper that carries out the regridding from cubedsphere to latlon.
+        :param vector_names (list): names of vectors in ds, each list entry should follow '{}NAME' format for 'UNAME' and 'VNAME'.
+                                    if not provided, will fallback to '["{}VEL", "{}", "{}VELSQ", "{}THMASS"]'
 
         :return: regridded Dataset
         """
@@ -94,7 +116,9 @@ class Regridder:
         ds = xr.Dataset()
 
         # specify vector quantities and exclude from scalar regridding (special treatment nescessary)
-        vector_names = ["{}VEL", "{}", "{}VELSQ", "{}THMASS"]
+        if vector_names is None:
+            vector_names = ["{}VEL", "{}", "{}VELSQ", "{}THMASS"]
+
         _all_vectors = [vector.format(direction) for direction in ["U","V"] for vector in vector_names]
         to_not_regrid_scalar = ["lon_b", "lat_b", "lon", "lat"] + _all_vectors
 
@@ -118,20 +142,19 @@ class Regridder:
 
             # Do regridding for scalar data
             if interp is not None:
-                ds[data] = self._regrid_wrapper(interp)
+                ds[data] = self._regrid_wrapper(interp, **kwargs)
 
 
         # Regridding for vectors
         for vector in vector_names:
             try:
                 # interpolate vectors to cell centers:
-
                 interp_UV = grid.interp_2d_vector(vector={"X": self._ds[vector.format("U")], "Y": self._ds[vector.format("V")]}, to="center")
                 # rotate vectors geographic direction:
                 vector_E, vector_N = self._rotate_vector_to_EN(interp_UV["X"], interp_UV["Y"], self._ds[c.AngleCS], self._ds[c.AngleSN])
                 # perform the regridding:
-                ds[vector.format("U")] = self._regrid_wrapper(vector_E)
-                ds[vector.format("V")] = self._regrid_wrapper(vector_N)
+                ds[vector.format("U")] = self._regrid_wrapper(vector_E, **kwargs)
+                ds[vector.format("V")] = self._regrid_wrapper(vector_N, **kwargs)
             except KeyError:
                 pass
 
