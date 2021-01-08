@@ -13,11 +13,6 @@ Library for post processing of MITgcm cubed sphere data
 Work in progress! This library is a collection of tools that I found useful to use for the interpretation of cubed sphere data.
 
 ## Installation:
-**Clone this repo**:<br>
-```shell
-git clone https://github.com/AaronDavidSchneider/cubedsphere.git
-cd cubedsphere
-```
 **Create conda environment:**<br>
 ```shell
 conda create -n mitgcm
@@ -26,6 +21,21 @@ conda create -n mitgcm
 **Activate environment:**<br>
 ```shell
 conda activate mitgcm
+```
+
+### prepackaged installation:
+
+**Install cubedsphere:**<br>
+```shell
+conda install -c conda-forge xesmf esmpy xgcm matplotlib cubedsphere
+```
+
+### Alternative: Installation of development version:
+
+**Clone this repo**:<br>
+```shell
+git clone https://github.com/AaronDavidSchneider/cubedsphere.git
+cd cubedsphere
 ```
 
 **Install dependencies**:<br>
