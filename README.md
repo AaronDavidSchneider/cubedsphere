@@ -12,18 +12,6 @@ Library for post processing of MITgcm cubed sphere data
 ## Note:
 Work in progress! This library is a collection of tools that I found useful to use for the interpretation of cubed sphere data.
 
-## ToDo:
-**Postprocessing**:
-- [x] interface `xmitgcm` to enable the use of `.meta` and `.data` files *-> added wrapper*
-- [x] how do we expand lon_b and lat_b from left to outer for xmitgcm wrapper? *-> either nc file or soon with `xmitgcm.utils.get_grid_from_input`
-
-**Testing**:
-- [ ] compare results with matlab scripts
-
-**Interface**:
-- [x] which values should be hardcoded? *-> done in const.py*
-- [x] special tools needed for exorad?
-
 ## Installation:
 **Clone this repo**:<br>
 ```shell
@@ -108,6 +96,18 @@ We can fix this and keep using `conservative regridding` by using the grid files
 ![](docs/temp_ascii_input_grid_reg.png)
 
 In the future we will use `xmitgcm.utils.get_grid_from_input` function instead.
+
+## ToDo:
+**Postprocessing**:
+- [x] interface `xmitgcm` to enable the use of `.meta` and `.data` files *-> added wrapper*
+- [x] how do we expand lon_b and lat_b from left to outer for xmitgcm wrapper? *-> either nc file or soon with `xmitgcm.utils.get_grid_from_input`
+
+**Testing**:
+- [ ] compare results with matlab scripts
+
+**Interface**:
+- [x] which values should be hardcoded? *-> done in const.py*
+- [x] special tools needed for exorad?
 
 ## Credits
 Many of the methods come from: https://github.com/JiaweiZhuang/cubedsphere
