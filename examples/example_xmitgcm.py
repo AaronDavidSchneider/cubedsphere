@@ -16,7 +16,7 @@ ds_reg = regridder.regrid()
 
 # do some basic plotting to demonstrate the dataset
 # determine which timestep and Z to use:
-isel_dict = {c.time:0, c.k:0}
+isel_dict = {c.time:0, c.Z:0}
 
 # do some basic plotting to demonstrate the dataset
 fig = plt.figure(figsize=(8,6), constrained_layout=True)

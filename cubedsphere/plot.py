@@ -7,6 +7,21 @@ from matplotlib import cm
 import cubedsphere.const as c
 from .utils import flatten_ds
 
+def overplot_wind(ds_reg, U, V, stepsize=1):
+    """
+    Quick and dirty function for overplotting wind of a regridded dataset
+
+    :param ds_reg: regridded dataset
+    :param stepsize: specify the stepsize for which wind arrows should be plotted
+
+    :return:
+    """
+    ax = plt.gca()
+    y, x = ds_reg["lat"].values, ds_reg["lon"].values
+    xmesh, ymesh = np.meshgrid(x, y)
+    ax.quiver(xmesh[::stepsize, ::stepsize], ymesh[::stepsize, ::stepsize], U[::stepsize, ::stepsize],
+              V[::stepsize, ::stepsize])
+
 
 
 def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):

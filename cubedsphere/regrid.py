@@ -34,7 +34,7 @@ class Regridder:
             self._ds_grid_in = self._ds
         else:
             self._ds_grid_in = input_grid
-            if input_grid!=self._ds:
+            if input_grid != self._ds:
                 print(
                     "Caution: You chose to use an input grid that is different from the dataset to be regridded,\n"
                     "Only do so, if you are really sure that the input_grid matches!\n")
@@ -172,6 +172,9 @@ class Regridder:
         except ValueError:
             print(
                 "Warning: We could not remove the face dimension! Please check that your input dataset has only face dependencies where they belong.")
+
+        # xESMF names longitude lon and latitude lat. We want to rename it to whatever we set in const.py to be consistent
+        ds = ds.rename({"lon": c.lon, "lat": c.lat})
 
         # clean up weight files (see xESMF doc). Somehow not working in my xESMF version...
         # for regridder_i in self.regridder:

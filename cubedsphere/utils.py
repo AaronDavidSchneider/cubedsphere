@@ -1,9 +1,7 @@
 import xarray as xr
-import numpy as np
-import matplotlib.pyplot as plt
-import f90nml
 import xmitgcm
 import cubedsphere.const as c
+import sys
 
 def flatten_ds(ds):
     if c.i in ds.dims:
@@ -11,24 +9,11 @@ def flatten_ds(ds):
     else:
         return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.i_g)
 
-def read_parameters(outdir):
-    """
-    Use f90nml to infer exorad modelparameter from data file.
-    Useful for postprocessing
+def _add_swap_dim_attr(ds):
+    for dim in c.vertical_dict.keys():
+        ds[dim].attrs["swap_dim"] = c.vertical_dict[dim]
 
-    WIP
-
-    :param outdir:
-    :return deltaT: timestep
-    """
-    with open(f'{outdir}/data') as nml_file:
-        parser = f90nml.Parser()
-        parser.comment_tokens += '#'
-        data = parser.read(nml_file)
-
-    deltaT = data["parm03"]["deltaT"]
-
-    return deltaT
+    return ds
 
 def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "dynDiag", "surfDiag"]):
     """
@@ -54,6 +39,7 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
     dataset_list.append(xr.concat(grid, dim=range(6)))
 
     ds = xr.merge(dataset_list, compat="override")
+
     _rename_dict = {'XC': c.lon,
                     'XG': c.lon_b,
                     'YC': c.lat,
@@ -68,6 +54,10 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
                     'HFacC': c.HFacC,
                     'HFacW': c.HFacW,
                     'HFacS': c.HFacS,
+                    'RC': c.Z,
+                    'RF': c.Z_p1,
+                    'RU': c.Z_u,
+                    'RL': c.Z_l,
                     'Z': c.k,
                     'Zu': c.k_u,
                     'Zl': c.k_l,
@@ -91,6 +81,8 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
                     }
     ds = ds.rename(_rename_dict)
 
+    ds = swap_vertical_coords(ds)
+
     return ds
 
 def open_ascii_dataset(outdir, iternumber, **kwargs):
@@ -104,6 +96,7 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
     :return:
     """
     ds = xmitgcm.open_mdsdataset(data_dir=outdir, iters=iternumber, grid_vars_to_coords=True, geometry="cs", **kwargs).load()
+    ds = swap_vertical_coords(ds)
 
     # You might need to extend this if you plan to change values in const.py!
     _rename_dict = {'XC': c.lon,
@@ -121,10 +114,10 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
                     'hFacW': c.HFacW,
                     'hFacS': c.HFacS,
                     'time': c.time,
-                    'k': c.k,
-                    'k_u': c.k_u,
-                    'k_l': c.k_l,
-                    'k_p1': c.k_p1,
+                    'Z': c.Z,
+                    'Zu': c.Z_u,
+                    'Zl': c.Z_l,
+                    'Zp1': c.Z_p1,
                     'drF': c.drF,
                     'drC': c.drC,
                     'dxC': c.dxC,
@@ -143,18 +136,42 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
 
     return ds
 
-def overplot_wind(ds_reg, U, V, stepsize=1):
+def swap_vertical_coords(ds, drop_old=True):
     """
-    Quick and dirty function for overplotting wind of a regridded dataset
+    function adapted from xmitgcm to switch the logical vertical dimension to the physical pressure coordinates.
 
-    :param ds_reg: regridded dataset
-    :param stepsize: specify the stepsize for which wind arrows should be plotted
-
+    :param ds: ds for which the vertical dimension should be switched
+    :param drop_old: drop old index. True by default
     :return:
     """
-    ax = plt.gca()
-    y, x = ds_reg["lat"].values, ds_reg["lon"].values
-    xmesh, ymesh = np.meshgrid(x, y)
-    ax.quiver(xmesh[::stepsize, ::stepsize], ymesh[::stepsize, ::stepsize], U[::stepsize, ::stepsize],
-              V[::stepsize, ::stepsize])
 
+    keep_attrs = ['axis', 'c_grid_axis_shift']
+
+    if 'swap_dim' not in ds[c.k].attrs:
+        ds = _add_swap_dim_attr(ds)
+
+    # first squeeze all the coordinates
+    for orig_dim in ds.dims:
+        if 'swap_dim' in ds[orig_dim].attrs and orig_dim in c.vertical_dict.keys():
+            new_dim = ds[orig_dim].attrs['swap_dim']
+            coord_var = ds[new_dim]
+            for coord_dim in coord_var.dims:
+                if coord_dim != orig_dim:
+                    # dimension should be the same along all other axes, so just
+                    # take the first row / column
+                    coord_var = coord_var.isel(**{coord_dim: 0}).drop(coord_dim)
+            ds[new_dim] = coord_var
+            for key in keep_attrs:
+                if key in ds[orig_dim].attrs:
+                    ds[new_dim].attrs[key] = ds[orig_dim].attrs[key]
+    # then swap dims
+    for orig_dim in ds.dims:
+        if 'swap_dim' in ds[orig_dim].attrs and orig_dim in c.vertical_dict.keys():
+            new_dim = ds[orig_dim].attrs['swap_dim']
+            ds = ds.swap_dims({orig_dim:  new_dim})
+            if drop_old:
+                if sys.version_info[0] < 3:
+                    ds = ds.drop(orig_dim)
+                else:
+                    ds = ds.drop_vars(orig_dim)
+    return ds
