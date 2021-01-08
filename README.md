@@ -15,14 +15,14 @@ Work in progress! This library is a collection of tools that I found useful to u
 ## ToDo:
 **Postprocessing**:
 - [x] interface `xmitgcm` to enable the use of `.meta` and `.data` files *-> added wrapper*
-- [ ] how do we expand lon_b and lat_b from left to outer for xmitgcm wrapper? 
+- [x] how do we expand lon_b and lat_b from left to outer for xmitgcm wrapper? *-> either nc file or soon with `xmitgcm.utils.get_grid_from_input`
 
 **Testing**:
 - [ ] compare results with matlab scripts
 
 **Interface**:
 - [x] which values should be hardcoded? *-> done in const.py*
-- [ ] special tools needed for exorad?
+- [x] special tools needed for exorad?
 
 ## Installation:
 **Clone this repo**:<br>
@@ -56,37 +56,42 @@ See `examples/example.py`. The following plots have been created using data from
 ```python
 import matplotlib.pyplot as plt
 import cubedsphere as cs
-import time
+import cubedsphere.const as c
 
 # Specify directory where the output files can be found
-outdir = "run"
+outdir = "/Volumes/SCRATCH/sim_output/xmitgcm_test/nc_test"
 
 # open Dataset
 ds = cs.open_mnc_dataset(outdir, 276480)
 
 # regrid dataset
-t = time.time()
-regridder = cs.Regridder(ds, 5, 4, reuse_weights=False, filename="weights")
+regridder = cs.Regridder(ds, 5, 4, reuse_weights=False, filename="weights", concat_mode=False)
 # Note: once weights were created, we can also reuse files by using reuse_weights=True (saves time).
 ds_reg = regridder.regrid()
-print(f"time needed to regrid dataset: {time.time()-t}")
 ```
-Only takes 3 seconds!
+Only takes few seconds!
 ```python
 # do some basic plotting to demonstrate the dataset
 # determine which timestep and Z to use:
-isel_dict = {"T":1,"Zmd000020":0}
+isel_dict = {c.time:0, c.Z:0}
 
 # do some basic plotting to demonstrate the dataset
-ds_reg["THETA"].isel(**isel_dict).plot()
-U, V = ds_reg["UVEL"].isel(**isel_dict).values, ds_reg["VVEL"].isel(**isel_dict).values
+fig = plt.figure(figsize=(8,6), constrained_layout=True)
+ds_reg[c.T].isel(**isel_dict).plot(vmin=260,vmax=312, add_colorbar=False)
+U, V = ds_reg["U"].isel(**isel_dict).values, ds_reg["V"].isel(**isel_dict).values
 cs.overplot_wind(ds_reg, U, V)
+plt.gca().set_aspect('equal')
+plt.savefig("../docs/temp_reg.png")
 plt.show()
+
 ```
 ![](docs/temp_reg.png)
 ```python
 # Now also plotting theta without regridding (on the original grid):
-cs.plotCS(ds["THETA"].isel(**isel_dict), ds, mask_size=5)
+fig = plt.figure(figsize=(8,6), constrained_layout=True)
+cs.plotCS(ds[c.T].isel(**isel_dict), ds, mask_size=5, vmin=260, vmax=312)
+plt.gca().set_aspect('equal')
+plt.savefig("../docs/temp_direct.png")
 plt.show()
 ```
 ![](docs/temp_direct.png)
@@ -94,22 +99,15 @@ plt.show()
 ### Tests with xmitgcm:
 See `examples/example_xmitgcm.py`
 
+Since we do not have the grid information, we need to fallback to the `nearest_s2d` interpolation with concat mode. Concat mode means that instead of regridding each face individually and summing up the results, we first concatenate the ds along the X dimension and regrid on the flattened dataset afterwards.
+
 ![](docs/temp_ascii_reg.png)
 
-We miss the boundary values, since xmitgcm only gives the left corner coordinates, but not the outer coordinates, which would be needed for conservative regridding with xESMF<br>
-We can fix this by using the grid files from the mnc dataset:
+We can fix this and keep using `conservative regridding` by using the grid files from the mnc dataset:
 
 ![](docs/temp_ascii_input_grid_reg.png)
 
-In the future we will use `xmitgcm.utils.get_grid_from_input` function instead
-
-### Tests with xmitgcm and concat mode:
-concat mode means that instead of regridding each face individually and summing up the results, we first concatenate the ds along the X dimension and regrid on the flattened dataset afterwards.
-See `examples/example_xmitgcm_concat.py`
-
-![](docs/temp_ascii_concat_reg.png)
-
-This does not yet work!
+In the future we will use `xmitgcm.utils.get_grid_from_input` function instead.
 
 ## Credits
 Many of the methods come from: https://github.com/JiaweiZhuang/cubedsphere

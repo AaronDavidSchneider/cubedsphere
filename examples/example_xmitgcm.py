@@ -29,7 +29,7 @@ plt.show()
 
 # Now also plotting theta without regridding (on the original grid):
 fig = plt.figure(figsize=(8,6), constrained_layout=True)
-cs.plotCS(ds_ascii[c.T].isel(**isel_dict), ds_ascii, mask_size=5, vmin=260,vmax=312,)
+cs.plotCS(ds_ascii[c.T].isel(**isel_dict), ds_ascii, mask_size=5, vmin=260,vmax=312)
 plt.gca().set_aspect('equal')
 plt.savefig("../docs/temp_ascii_direct.png")
 plt.show()

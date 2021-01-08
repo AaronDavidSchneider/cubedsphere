@@ -18,6 +18,9 @@ class Regridder:
     def __init__(self, ds, d_lon=5, d_lat=4, input_grid=None, concat_mode=False, filename="weights", method='conservative', **kwargs):
         """
         Build the regridder objects (one for each face).
+        Only two methods are possible with the cs geometry: conservative when using concat_mode=False (requires lon_b
+        to have different shape from lon and lat_b from lat) or nearest_s2d when using concat_mode=True.
+        Conservative regridding should be used if possible!
 
         :param ds: dataset to be regridded. Dataset must contain grid information.
         :param d_lon: Longitude step size, i.e. grid resolution.
@@ -52,50 +55,52 @@ class Regridder:
         print(f"Regridder will use {self._method} method")
         if self._method not in ["patch","conservative"]:
             print("Caution: The regridding method that you chose might not conserve fluxes")
-        if self._method not in ["conservative"]:
+        if self._method not in ["conservative", "nearest_s2d"]:
             print("Caution: The regridding method that you chose might return 0's on borders, double check by plotting the dataset")
 
     def _build_regridder_faces(self, filename, **kwargs):
+        if np.all(self._ds_grid_in[c.lat].shape == self._ds_grid_in[c.lat_b].shape):
+            self._method = "nearest_s2d"
+            self._concat_mode = True
+            self._build_regridder_concat(filename, **kwargs)
+            print("falling back to concat mode. The ds you provide has no outer coordinates.")
+            return
+
         self._grid_in = [None] * 6
-        try:
-            for i in range(6):
-                self._grid_in[i] = {'lat': self._ds_grid_in[c.lat].isel(**{c.FACEDIM: i}),
-                                    'lon': self._ds_grid_in[c.lon].isel(**{c.FACEDIM: i}),
-                                    'lat_b': self._ds_grid_in[c.lat_b].isel(**{c.FACEDIM: i}),
-                                    'lon_b': self._ds_grid_in[c.lon_b].isel(**{c.FACEDIM: i})}
-            self.regridder = [
-                xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method=self._method,
-                             **kwargs)
-                for i in range(6)]
-        except AssertionError as e:
-            print(
-                f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
-            for i in range(6):
-                self._grid_in[i] = {'lat': self._ds_grid_in[c.lat].isel(**{c.FACEDIM: i}),
-                                    'lon': self._ds_grid_in[c.lon].isel(**{c.FACEDIM: i})}
-            self.regridder = [
-                xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method="bilinear",
-                             **kwargs)
-                for i in range(6)]
-            self._method = "bilinear"
+        for i in range(6):
+            self._grid_in[i] = {'lat': self._ds_grid_in[c.lat].isel(**{c.FACEDIM: i}),
+                                'lon': self._ds_grid_in[c.lon].isel(**{c.FACEDIM: i}),
+                                'lat_b': self._ds_grid_in[c.lat_b].isel(**{c.FACEDIM: i}),
+                                'lon_b': self._ds_grid_in[c.lon_b].isel(**{c.FACEDIM: i})}
+
+        if self._method in ["nearest_s2d", "nearest_d2s"]:
+            self._method = "conservative"
+            print("falling back to conservative. Nearest neighbour methods aint working for `concat_mode=False`")
+
+        self.regridder = [
+            xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method=self._method,
+                         **kwargs)
+            for i in range(6)]
 
     def _build_regridder_concat(self, filename, **kwargs):
-        try:
-            self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.lat]),
-                             'lon': flatten_ds(self._ds_grid_in[c.lon]),
-                             'lat_b': flatten_ds(self._ds_grid_in[c.lat_b]),
-                             'lon_b': flatten_ds(self._ds_grid_in[c.lon_b])}
-            self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method,
-                                          **kwargs)
-        except AssertionError as e:
-            print(
-                f"falling back to bilinear: The interpolation method you chose doesn't work with your grid geometry: {e}")
-            self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.lat]),
-                             'lon': flatten_ds(self._ds_grid_in[c.lon])}
-            self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method="bilinear",
-                                          **kwargs)
-            self._method = "bilinear"
+        if self._method != "nearest_s2d":
+            if np.all(self._ds_grid_in[c.lon].shape!=self._ds_grid_in[c.lon_b].shape):
+                self._method = "conservative"
+                self._concat_mode = False
+                print(
+                    f"falling back to {self._method} and `concat_mode={self._concat_mode}: The interpolation method you chose doesn't work with your grid geometry")
 
+                self._build_regridder_faces(filename,**kwargs)
+                return
+            else:
+                self._method = "nearest_s2d"
+                print(f"falling back to {self._method}: The interpolation method you chose doesn't work with your grid geometry")
+
+        self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.lat]),
+                         'lon': flatten_ds(self._ds_grid_in[c.lon])}
+
+        self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method, periodic=False,
+                                      **kwargs)
 
     def _build_output_grid(self, d_lon, d_lat):
         grid = xe.util.grid_global(d_lon, d_lat)
@@ -167,11 +172,8 @@ class Regridder:
                 pass
 
         # remove the face dimension from the dataset
-        try:
+        if c.FACEDIM in ds.dims:
             ds = ds.reset_coords(c.FACEDIM)
-        except ValueError:
-            print(
-                "Warning: We could not remove the face dimension! Please check that your input dataset has only face dependencies where they belong.")
 
         # xESMF names longitude lon and latitude lat. We want to rename it to whatever we set in const.py to be consistent
         ds = ds.rename({"lon": c.lon, "lat": c.lat})
