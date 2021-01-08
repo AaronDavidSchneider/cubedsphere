@@ -100,7 +100,7 @@ In the future we will use `xmitgcm.utils.get_grid_from_input` function instead.
 ## ToDo:
 **Postprocessing**:
 - [x] interface `xmitgcm` to enable the use of `.meta` and `.data` files *-> added wrapper*
-- [x] how do we expand lon_b and lat_b from left to outer for xmitgcm wrapper? *-> either nc file or soon with `xmitgcm.utils.get_grid_from_input`
+- [x] how do we expand lon_b and lat_b from left to outer for xmitgcm wrapper? *-> either nc file or soon with `xmitgcm.utils.get_grid_from_input`*
 
 **Testing**:
 - [ ] compare results with matlab scripts
@@ -108,6 +108,10 @@ In the future we will use `xmitgcm.utils.get_grid_from_input` function instead.
 **Interface**:
 - [x] which values should be hardcoded? *-> done in const.py*
 - [x] special tools needed for exorad?
+
+## future Ideas:
+**Regridding tools**:
+- [ ] use [ESMPy](https://gist.github.com/JiaweiZhuang/990e8019c4103aec8353434a88f24b8a) as an alternative to xESMF (requires 6 processors)
 
 ## Credits
 Many of the methods come from: https://github.com/JiaweiZhuang/cubedsphere

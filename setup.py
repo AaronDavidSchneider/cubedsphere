@@ -5,10 +5,11 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='cubedsphere',
-    version='v0.1',
+    version='v0.1.1',
     packages=setuptools.find_packages(),
     include_package_data=True,
     url='https://github.com/AaronDavidSchneider/cubedsphere',
+    download_url='https://github.com/AaronDavidSchneider/chemcomp/archive/0.1.zip',
     license='MIT',
     author='Aaron David Schneider',
     author_email='aaron.schneider@nbi.ku.dk',
@@ -19,5 +20,18 @@ setuptools.setup(
         "scipy",
         "numpy",
         "matplotlib",
-    ]
+        "xesmf",
+        "esmpy",
+        "xgcm"
+    ],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'Topic :: Software Development :: Build Tools',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+      ],
 )
