@@ -9,7 +9,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     url='https://github.com/AaronDavidSchneider/cubedsphere',
-    download_url='https://github.com/AaronDavidSchneider/chemcomp/archive/0.1.zip',
+    download_url='https://github.com/AaronDavidSchneider/chemcomp/archive/0.1.1.zip',
     license='MIT',
     author='Aaron David Schneider',
     author_email='aaron.schneider@nbi.ku.dk',
