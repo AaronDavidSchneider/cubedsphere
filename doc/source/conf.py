@@ -10,9 +10,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('../..'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../..'))
 
 
 # -- Project information -----------------------------------------------------
@@ -58,7 +58,7 @@ numpydoc_show_class_members = False
 
 # To avoid installing xESMF and all its dependencies when building doc
 # https://stackoverflow.com/a/15912502/8729698
-# autodoc_mock_imports = ['numpy', 'xarray', 'scipy', 'ESMF', 'xESMF', 'xmitgcm', 'ESMPy', 'xgcm']
+autodoc_mock_imports = ['xarray', 'scipy', 'ESMF', 'xesmf', 'xmitgcm', 'ESMPy', 'xgcm']
 
 # avoid automatic execution for notebooks
 nbsphinx_execute = 'never'
