@@ -1,4 +1,6 @@
 # cubedsphere
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/cubedsphere/badges/installer/conda.svg)](https://conda.anaconda.org/conda-forge) [![Anaconda-Server Badge](https://anaconda.org/conda-forge/cubedsphere/badges/license.svg)](https://anaconda.org/conda-forge/cubedsphere) [![Anaconda-Server Badge](https://anaconda.org/conda-forge/cubedsphere/badges/version.svg)](https://anaconda.org/conda-forge/cubedsphere) [![Anaconda-Server Badge](https://anaconda.org/conda-forge/cubedsphere/badges/platforms.svg)](https://anaconda.org/conda-forge/cubedsphere) [![Anaconda-Server Badge](https://anaconda.org/conda-forge/cubedsphere/badges/latest_release_date.svg)](https://anaconda.org/conda-forge/cubedsphere)
+
 Library for post processing of MITgcm cubed sphere data
 
 ## Capabilities:
