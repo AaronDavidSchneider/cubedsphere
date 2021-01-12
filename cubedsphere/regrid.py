@@ -30,16 +30,21 @@ class Regridder:
     grid: dict
         output grid
 
-    Methods
-    -------
-    __init__:
-        build the regridder
-    __call__:
-        call the regridder
+    Examples
+    --------
+    >>> import cubedsphere as cs  # import cubedsphere
+    >>> outdir = "../run"  # specify output directory
+    >>> ds = cs.open_mnc_dataset(outdir, 276480)  # open dataset
+    >>> regrid = cs.Regridder(ds)  # init regridder
+    >>> ds_regrid = regrid()  # perform regridding of dataset
+
+    Notes
+    -----
+    You can find more examples in the examples directory
     """
     def __init__(self, ds, d_lon=5, d_lat=4, input_grid=None, concat_mode=False, filename="weights", method='conservative', **kwargs):
         """
-        Build
+        Build the regridder. This step will create the output grid and weight files which will then be used to regrid the dataset.
 
         Parameters
         ----------
@@ -59,18 +64,6 @@ class Regridder:
             Regridding method. See xe.Regridder for options.
         kwargs :
             Optional parameters that are passed to xe.Regridder (see xe.Regridder for options).
-
-        Examples
-        --------
-        >>> import cubedsphere as cs  # import cubedsphere
-        >>> outdir = "../run"  # specify output directory
-        >>> ds = cs.open_mnc_dataset(outdir, 276480)  # open dataset
-        >>> regrid = cs.Regridder(ds)  # init regridder
-        >>> ds_regrid = regrid()  # perform regridding of dataset
-
-        Notes
-        -----
-        You can find more examples in the examples directory
         """
         t = time.time()
         self._ds = ds

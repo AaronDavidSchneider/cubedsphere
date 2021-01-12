@@ -10,13 +10,12 @@ Welcome to cubedsphere's documentation!
    :caption: Contents:
 
    README
-   modules
-
+   usage
+   exorad
 
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
