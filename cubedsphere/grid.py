@@ -1,3 +1,7 @@
+"""
+XGCM Grid initialisations for cubedsphere and regridded datasets
+"""
+
 import xarray as xr
 import xgcm
 import numpy as np
@@ -9,16 +13,25 @@ import os
 
 def init_grid_CS(ds=None, grid_dir=None, **kwargs):
     """
+    Init a xgcm grid for a cubedsphere dataset. Useful for raw datasets.
 
-    :param grid_dir: direction where the grid can be found (optional)
-    :param ds: dataset that contains the grid (optional)
-    :return:
+    Parameters
+    ----------
+    grid_dir: string
+        direction where the grid can be found (optional)
+    ds: xarray DataSet
+        dataset that contains the grid (optional)
+
+    Returns
+    ----------
+    grid: xgcm.grid
+        xgcm grid
     """
     if grid_dir is not None:
         grid_files = os.path.join(grid_dir,"grid.t{:03d}.nc")
         grid_list = [xr.open_dataset(grid_files.format(i)) for i in range(1, 7)]
         grid_nc = xr.concat(grid_list, dim=range(6))
-        grid_nc = cs.utils.swap_vertical_coords(grid_nc)
+        grid_nc = cs.utils._swap_vertical_coords(grid_nc)
     elif ds is not None:
         grid_nc = ds
     else:
@@ -41,14 +54,14 @@ def init_grid_CS(ds=None, grid_dir=None, **kwargs):
     if np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift")==-0.5:
         # We might have left values here
         coords = {c.i: {'center': c.i, 'left': c.i_g}, c.j: {'center': c.j, 'left': c.j_g}, c.time: {'center': c.time},
-                  c.Z: {'center': c.Z, 'right': c.Z_l, 'left': c.Z_u, 'outer': c.Z_p1}}
+                  c.Z: {'center': c.Z, 'right': c.Z_u, 'left': c.Z_l, 'outer': c.Z_p1}}
     elif np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift")==+0.5:
         # We might have left values here
         coords = {c.i: {'center': c.i, 'right': c.i_g}, c.j: {'center': c.j, 'right': c.j_g}, c.time: {'center': c.time},
-                  c.Z: {'center': c.Z, 'right': c.Z_l, 'left': c.Z_u, 'outer': c.Z_p1}}
+                  c.Z: {'center': c.Z, 'right': c.Z_u, 'left': c.Z_l, 'outer': c.Z_p1}}
     else:
         coords = {c.i: {'center': c.i, 'outer': c.i_g}, c.j: {'center': c.j, 'outer': c.j_g}, c.time: {'center': c.time},
-                  c.Z: {'center': c.Z, 'right': c.Z_l, 'left': c.Z_u, 'outer': c.Z_p1}}
+                  c.Z: {'center': c.Z, 'right': c.Z_u, 'left': c.Z_l, 'outer': c.Z_p1}}
 
     grid_nc[c.drW] = grid_nc[c.HFacW] * grid_nc[c.drF]  # vertical cell size at u point
     grid_nc[c.drS] = grid_nc[c.HFacS] * grid_nc[c.drF]  # vertical cell size at v point
@@ -67,11 +80,20 @@ def init_grid_CS(ds=None, grid_dir=None, **kwargs):
 
 def init_grid_LL(ds=None, grid_dir=None, **kwargs):
     """
+    Init a xgcm grid for a latlon dataset. Useful for regridded datasets
 
-        :param grid_dir: direction where the grid can be found (optional)
-        :param ds: dataset that contains the grid (optional)
-        :return:
-        """
+    Parameters
+    ----------
+    grid_dir: string
+        direction where the grid can be found (optional)
+    ds: xarray DataSet
+        dataset that contains the grid (optional)
+
+    Returns
+    ----------
+    grid: xgcm.grid
+        xgcm grid
+    """
     if grid_dir is not None:
         grid_files = os.path.join(grid_dir, "grid.t{:03d}.nc")
         grid_list = [xr.open_dataset(grid_files.format(i)) for i in range(1, 7)]
@@ -82,7 +104,7 @@ def init_grid_LL(ds=None, grid_dir=None, **kwargs):
         raise TypeError("you need to specify ds or grid_dir")
 
     coords = {c.lon: {'center': c.lon}, c.lat: {'center': c.lat}, c.time: {'center': c.time},
-              c.Z: {'center': c.Z, 'right': c.Z_l, 'left': c.Z_u, 'outer': c.Z_p1}}
+              c.Z: {'center': c.Z, 'right': c.Z_u, 'left': c.Z_l, 'outer': c.Z_p1}}
 
     boundary = {c.i: None, c.j: None, c.time: 'extrapolate', c.Z: 'extrapolate'}
 

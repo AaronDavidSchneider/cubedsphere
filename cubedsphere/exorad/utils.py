@@ -4,14 +4,19 @@ import numpy as np
 import os
 
 def get_parameter(datafile, keyword):
-    """Function to parse the MITgcm 'data' file and return the parameter values
+    """
+    Function to parse the MITgcm 'data' file and return the parameter values
     of the given specific keyword.
-    ------- Parameters -------
+
+    Parameters
+    ----------
     datafile: string
         Full path to the MITgcm data file.
     keyword: string
         Parameter of which the value is required.
-    --------- Return ---------
+
+    Returns
+    ----------
     value: string
         The value associated with the given keyword is returned as a string (!).
     """
@@ -35,10 +40,19 @@ def exorad_postprocessing(ds, outdir=None, datafile=None):
     Preliminaray postprocessing on exorad dataset.
     This function converts the vertical windspeed from Pa into meters and saves attributes to the dataset.
 
-    :param ds: dataset to be extended
-    :param outdir: directory in which to find the data file (following the convention f'{outdir}/data')
-    :param datafile: alternatively specify datafile directly
-    :return ds:
+    Parameters
+    ----------
+    ds: Dataset
+        dataset to be extended
+    outdir: string
+        directory in which to find the data file (following the convention f'{outdir}/data')
+    datafile: string
+        alternatively specify datafile directly
+
+    Returns
+    ----------
+    ds:
+        Dataset to be returned
     """
     assert outdir is not None or datafile is not None, "please specify a datafile or a folder where we can find a datafile"
 

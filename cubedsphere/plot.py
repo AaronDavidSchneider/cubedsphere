@@ -1,20 +1,25 @@
-import xarray as xr
+"""
+Library of utilities that can be used for plotting
+"""
+
 import numpy as np
 
 from matplotlib import pyplot as plt
 from matplotlib import cm
 
 import cubedsphere.const as c
-from .utils import flatten_ds
+from .utils import _flatten_ds
 
 def overplot_wind(ds_reg, U, V, stepsize=1):
     """
     Quick and dirty function for overplotting wind of a regridded dataset
 
-    :param ds_reg: regridded dataset
-    :param stepsize: specify the stepsize for which wind arrows should be plotted
-
-    :return:
+    Parameters
+    ----------
+    ds_reg: xarray DataSet
+        regridded dataset
+    stepsize: integer
+        specify the stepsize for which wind arrows should be plotted
     """
     ax = plt.gca()
     y, x = ds_reg["lat"].values, ds_reg["lon"].values
@@ -24,23 +29,26 @@ def overplot_wind(ds_reg, U, V, stepsize=1):
 
 
 
-def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
-    """A quick way to plot cubed-sphere data of resolution 6*N*N.
+def plotCS(dr, ds, mask_size=None, **kwargs):
+    """
+    A quick way to plot cubed-sphere data of resolution 6*N*N.
     Wrapping plotCS_quick_raw to work with xarray objects
+
     Parameters
     ----------
-    dr : xarray DataArray
+    dr: xarray DataArray
         The dimensions must be (y,x)
-    ds : xarray DataSet (the parent DataSet of dr)
+    ds: xarray DataSet (the parent DataSet of dr)
         Must contain XC, YC as coordinate variables.
-    mask_size
+    mask_size: None or int
+        The overlap size of individual tiles. If None is chosen one might likely experience issues
+    **kwargs
+        Other keyword arguments such as cmap will be passed to plotCS_quick_raw() and subsequently to plt.pcolormesh()
 
-    Other keyword arguments such as cmap will be passed to plotCS_quick_raw(),
-    then to plt.pcolormesh()
     Returns
     -------
-    im : matplotlib QuadMesh object
-        It contains the color information for making colorbar
+    ph: list
+        List of mappabales
     """
 
     # must convert xarray objects to raw numpy arrays
@@ -51,18 +59,18 @@ def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
     if len(ds[c.lon].shape) > 2:
         if ds[c.lon].shape[-1] == dr.shape[-1]:
             x_dim = c.lon
-            x = flatten_ds(ds[x_dim]).values
-            data = flatten_ds(dr).values
+            x = _flatten_ds(ds[x_dim]).values
+            data = _flatten_ds(dr).values
         elif ds[c.lon_b].shape[-1] == dr.shape[-1]:
             x_dim = c.lon_b
-            x = flatten_ds(ds[x_dim]).values
-            data = flatten_ds(dr).values
+            x = _flatten_ds(ds[x_dim]).values
+            data = _flatten_ds(dr).values
         if ds[c.lat].shape[-2] == dr.shape[-2]:
             y_dim = c.lat
-            y = flatten_ds(ds[y_dim]).values
+            y = _flatten_ds(ds[y_dim]).values
         elif ds[c.lat_b].shape[-2] == dr.shape[-2]:
             y_dim = c.lat_b
-            y = flatten_ds(ds[y_dim]).values
+            y = _flatten_ds(ds[y_dim]).values
 
     else:
         x = ds[x_dim].values
@@ -80,10 +88,10 @@ def plotCS_wrapper(dr, ds, mask_size=None, **kwargs):
         except IndexError:
             print("caution: No masking possible!")
 
-    plot_cs_raw(x, y, data, **kwargs)
+    return _plot_cs_raw(x, y, data, **kwargs)
 
 
-def plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
+def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
     """
     Plots 2D scalar fields on the MITgcm cubed sphere grid with pcolormesh.
 
@@ -91,20 +99,24 @@ def plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
 
     Parameters
     ----------
-    x : array_like
+    x: array_like
         'xg', that is, x coordinate of the points one half grid cell to the
         left and bottom, that is vorticity points for tracers, etc.
-    y : array_like
+    y: array_like
         'yg', that is, y coordinate of same points
-    data : array_like
+    data: array_like
         scalar field at tracer points
-    projection : Basemap instance, optional
+    projection: Basemap instance, optional
         used to transform if present.
         Unfortunatly, cylindrical and conic maps are limited to
         the [-180 180] range.
         projection = 'sphere' results in a 3D visualization on the sphere
         without any specific projection. Good for debugging.
 
+    Returns
+    -------
+    ph: list
+        List of mappabales
     """
 
     # pcol first divides the 2D cs-field(6*n,n) into six faces. Then for
@@ -208,7 +220,7 @@ def plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
             # no projection at all (projection argument is 'sphere'),
             # just convert to cartesian coordinates and plot a 3D sphere
             deg2rad = np.pi / 180.
-            xcart, ycart, zcart = sph2cart(xf * deg2rad, yf * deg2rad)
+            xcart, ycart, zcart = _sph2cart(xf * deg2rad, yf * deg2rad)
             ax.plot_surface(xcart, ycart, zcart, rstride=1, cstride=1,
                             facecolors=mycolmap[0:ny, ix],
                             linewidth=2, shade=False)
@@ -256,7 +268,7 @@ def plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
 
     return ph
 
-def sph2cart(azim_sph_coord, elev_sph_coord):
+def _sph2cart(azim_sph_coord, elev_sph_coord):
     r = np.cos(elev_sph_coord)
     x = -r * np.sin(azim_sph_coord)
     y = r * np.cos(azim_sph_coord)

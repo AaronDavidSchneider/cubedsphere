@@ -1,3 +1,7 @@
+"""
+Variable names used through out this package
+"""
+
 FACEDIM = "face"       # index of the facedimension
 j = "j"                # Y index
 i = "i"                # X index
@@ -8,9 +12,9 @@ k_l = "k_l"            # upper Z interface
 k_p1 = "k_p1"          # outer Z interface
 k_u = "k_u"            # lower Z interface
 Z = "Z"                # Z index
-Z_l = "Z_l"            # upper Z interface
+Z_l = "Z_l"            # lower Z interface
 Z_p1 = "Z_p1"          # outer Z interface
-Z_u = "Z_u"            # lower Z interface
+Z_u = "Z_u"            # upper Z interface
 T = "T"                # Temperature
 drW = "drW"
 drS = "drS"

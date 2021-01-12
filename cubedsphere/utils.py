@@ -1,9 +1,26 @@
+"""
+Helper functions used throughout this package and utilities to open datasets using xmitgcm and mnc
+"""
+
 import xarray as xr
 import xmitgcm
 import cubedsphere.const as c
 import sys
 
-def flatten_ds(ds):
+def _flatten_ds(ds):
+    """
+    Function that concatenates the face dimension along X
+
+    Parameters
+    ----------
+    ds: xarray Dataset
+        Dataset which should be concatenated
+
+    Returns
+    -------
+    ds: xarray Dataset
+        concatenated Dataset
+    """
     if c.i in ds.dims:
         return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.i)
     else:
@@ -19,11 +36,19 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
     """
     Wrapper that opens simulation outputs from mnc outputs.
 
-    :param outdir: Output directory
-    :param iternumber: iteration number of output file
-    :param fname_list: List of NetCDF file prefixes to read (no need to specify grid files here)
+    Parameters
+    ----------
+    outdir: string
+        Output directory
+    iternumber: integer
+        iteration number of output file
+    fname_list: list
+        List of NetCDF file prefixes to read (no need to specify grid files here)
 
-    :return:
+    Returns
+    ----------
+    ds: xarray Dataset
+        Dataset of simulation output
     """
     # read_parameters(outdir)
 
@@ -81,7 +106,7 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
                     }
     ds = ds.rename(_rename_dict)
 
-    ds = swap_vertical_coords(ds)
+    ds = _swap_vertical_coords(ds)
 
     return ds
 
@@ -89,14 +114,22 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
     """
     Wrapper that opens simulation outputs from standard mitgcm outputs.
 
-     :param outdir: Output directory
-    :param iternumber: See xmitgcm iters, can be a iterationnumber or 'all'
-    :param kwargs: everything else that is passed to xmitgcm
+    Parameters
+    ----------
+    outdir: string
+        Output directory
+    iternumber: List or integer or None
+        See xmitgcm iters, can be a iterationnumber or 'all'
+    **kwargs
+        everything else that is passed to xmitgcm
 
-    :return:
+    Returns
+    ----------
+    ds: xarray Dataset
+        Dataset of simulation output
     """
     ds = xmitgcm.open_mdsdataset(data_dir=outdir, iters=iternumber, grid_vars_to_coords=True, geometry="cs", **kwargs).load()
-    ds = swap_vertical_coords(ds)
+    ds = _swap_vertical_coords(ds)
 
     # You might need to extend this if you plan to change values in const.py!
     _rename_dict = {'XC': c.lon,
@@ -136,13 +169,21 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
 
     return ds
 
-def swap_vertical_coords(ds, drop_old=True):
+def _swap_vertical_coords(ds, drop_old=True):
     """
     function adapted from xmitgcm to switch the logical vertical dimension to the physical pressure coordinates.
 
-    :param ds: ds for which the vertical dimension should be switched
-    :param drop_old: drop old index. True by default
-    :return:
+    Parameters
+    ----------
+    ds: xarray Dataset
+        ds for which the vertical dimension should be switched
+    drop_old: boolean
+        drop old index. True by default
+
+    Returns
+    ----------
+    ds: xarray Dataset
+        Dataset with swaped vertical coordinates
     """
 
     keep_attrs = ['axis', 'c_grid_axis_shift']

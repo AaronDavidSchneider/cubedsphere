@@ -1,4 +1,5 @@
 """
+Module for regridding cubedsphere datasets
 Inspired from https://github.com/JiaweiZhuang/cubedsphere/blob/master/example_notebooks/C2L_regrid.ipynb
 """
 import xesmf as xe
@@ -8,28 +9,68 @@ import warnings
 import time
 import cubedsphere.const as c
 from .grid import init_grid_CS
-from .utils import flatten_ds
+from .utils import _flatten_ds
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
 
 class Regridder:
+    """
+    Class that wraps the xESMF regridder for cs geometry.
+
+    Only two methods are possible with the cs geometry: conservative when using concat_mode=False (requires lon_b
+    to have different shape from lon and lat_b from lat) or nearest_s2d when using concat_mode=True.
+    Conservative regridding should be used if possible!
+
+    Attributes
+    ----------
+    regridder: list or xESMF regrid object
+        (contains) the initialized xESMF regridder
+    grid: dict
+        output grid
+
+    Methods
+    -------
+    __init__:
+        build the regridder
+    __call__:
+        call the regridder
+    """
     def __init__(self, ds, d_lon=5, d_lat=4, input_grid=None, concat_mode=False, filename="weights", method='conservative', **kwargs):
         """
-        Build the regridder objects (one for each face).
-        Only two methods are possible with the cs geometry: conservative when using concat_mode=False (requires lon_b
-        to have different shape from lon and lat_b from lat) or nearest_s2d when using concat_mode=True.
-        Conservative regridding should be used if possible!
+        Build
 
-        :param ds: dataset to be regridded. Dataset must contain grid information.
-        :param d_lon: Longitude step size, i.e. grid resolution.
-        :param d_lat: Latitude step size, i.e. grid resolution.
-        :param input_grid: use input grid different to ds. Caution with this practice!
-        :param concat_mode: use one regridding instance instead of one regridder for each face
-        :param filename: filename for weights (weights will be name filename(+ _tile{i}).nc)
-        :param method: Regridding method. See xe.Regridder for options.
-        :param kwargs: Optional parameters that are passed to xe.Regridder (see xe.Regridder for options).
+        Parameters
+        ----------
+        ds: xarray DataSet
+            Dataset to be regridded. Dataset must contain grid information.
+        d_lon: integer
+            Longitude step size, i.e. grid resolution.
+        d_lat: integer
+            Latitude step size, i.e. grid resolution.
+        input_grid: xarray DataSet
+            use input grid different to ds. Caution with this practice!
+        concat_mode: boolean
+            use one regridding instance instead of one regridder for each face
+        filename: string
+            filename for weights (weights will be name filename(+ _tile{i}).nc)
+        method: string
+            Regridding method. See xe.Regridder for options.
+        kwargs :
+            Optional parameters that are passed to xe.Regridder (see xe.Regridder for options).
+
+        Examples
+        --------
+        >>> import cubedsphere as cs  # import cubedsphere
+        >>> outdir = "../run"  # specify output directory
+        >>> ds = cs.open_mnc_dataset(outdir, 276480)  # open dataset
+        >>> regrid = cs.Regridder(ds)  # init regridder
+        >>> ds_regrid = regrid()  # perform regridding of dataset
+
+        Notes
+        -----
+        You can find more examples in the examples directory
         """
         t = time.time()
         self._ds = ds
@@ -96,8 +137,8 @@ class Regridder:
                 self._method = "nearest_s2d"
                 print(f"falling back to {self._method}: The interpolation method you chose doesn't work with your grid geometry")
 
-        self._grid_in = {'lat': flatten_ds(self._ds_grid_in[c.lat]),
-                         'lon': flatten_ds(self._ds_grid_in[c.lon])}
+        self._grid_in = {'lat': _flatten_ds(self._ds_grid_in[c.lat]),
+                         'lon': _flatten_ds(self._ds_grid_in[c.lon])}
 
         self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method, periodic=False,
                                       **kwargs)
@@ -108,13 +149,20 @@ class Regridder:
                    'lat_b': grid["lat_b"][:, 0].values, 'lon_b': grid["lon_b"][0, :].values}
         return grid_LL
 
-    def regrid(self, vector_names = None, **kwargs):
+    def __call__(self, vector_names = None, **kwargs):
         """
         Wrapper that carries out the regridding from cubedsphere to latlon.
-        :param vector_names (list): names of vectors in ds, each list entry should follow '{}NAME' format for 'UNAME' and 'VNAME'.
-                                    if not provided, will fallback to '["{}VEL", "{}", "{}VELSQ", "{}THMASS"]'
 
-        :return: regridded Dataset
+        Parameters
+        ----------
+        vector_names: list
+            names of vectors in ds, each list entry should follow '{}NAME' format for 'UNAME' and 'VNAME'.
+            if not provided, will fallback to '["{}VEL", "{}", "{}VELSQ", "{}THMASS"]'
+
+        Returns
+        -------
+        ds: xarray DataSet
+            regridded Dataset
         """
 
         # initialize an empty dataset
@@ -189,10 +237,17 @@ class Regridder:
         wrapper to regrid general scalar dataarray.
         Caution: Horizontal dimensions must be the last two dimensions!
 
-        :param ds_in: data to be regridded
-        :param kwargs: additional parameters to be passed to regridding call
+        Parameters
+        ----------
+        ds_in: xarray DataSet
+            data to be regridded
+        **kwargs
+            additional parameters to be passed to regridding call
 
-        :return: regridded data
+        Returns
+        ----------
+        numpy array:
+            regridded data
         """
         if len(ds_in.shape) == 5:
             data_out = np.zeros([ds_in.shape[1], ds_in.shape[2], self.grid['lat'].size, self.grid['lon'].size])
@@ -208,7 +263,7 @@ class Regridder:
                 return ds_in
 
         if self._concat_mode:
-            data_out = self.regridder(flatten_ds(ds_in), **kwargs)
+            data_out = self.regridder(_flatten_ds(ds_in), **kwargs)
         else:
             for i in range(6):
                 # add up the results for 6 tiles
@@ -222,12 +277,24 @@ class Regridder:
         rotate vector to east north direction.
         Assumes that AngleCS and AngleSN are already of same dimension as V and U (i.e. already interpolated to cell center)
 
-        :param U: zonal vector component
-        :param V: meridional vector component
-        :param AngleCS: Cosine of angle of the grid center relative to the geographic direction
-        :param AngleSN: Sine of angle of the grid center relative to the geographic direction
+        Parameters
+        ----------
+        U: xarray Dataarray
+            zonal vector component
+        V: xarray Dataarray
+            meridional vector component
+        AngleCS: xarray Dataarray
+            Cosine of angle of the grid center relative to the geographic direction
+        AngleSN: xarray Dataarray
+            Sine of angle of the grid center relative to the geographic direction
 
-        :return: uE, vN
+        Returns
+        ----------
+        uE: xarray Dataarray
+            rotated zonal velocity
+        vN: xarray Dataarray
+            rotated meridional velocity
+
         """
         # rotate the vectors:
         uE = AngleCS * U - AngleSN * V

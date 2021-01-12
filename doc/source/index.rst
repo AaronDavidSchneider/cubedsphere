@@ -5,10 +5,12 @@
 
 Welcome to cubedsphere's documentation!
 =======================================
-
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 5
    :caption: Contents:
+
+   README
+   modules
 
 
 
