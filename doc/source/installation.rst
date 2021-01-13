@@ -2,7 +2,7 @@ Installation
 ============
 
 .. warning::
-   You need OSX or Linux to use this package. `ESMPy <`https://earthsystemmodeling.org/esmpy/>`_ (the dependency that handles the regridding) does not work with Windows.
+   You need OSX or Linux to use this package. `ESMPy <https://earthsystemmodeling.org/esmpy/>`_ (the dependency that handles the regridding) does not work with Windows.
 
 
 Preparation
