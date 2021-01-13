@@ -7,6 +7,9 @@ We can either read mds data using
 
 .. autofunction:: cubedsphere.open_ascii_dataset
 
+.. warning::
+   You need to use :code:`useSingleCpuIO=.TRUE.` if you want to use ascii files (the default MITgcm output)
+
 We can also read NETCDF data which has been outputed from the mnc package
 
 .. autofunction:: cubedsphere.open_mnc_dataset

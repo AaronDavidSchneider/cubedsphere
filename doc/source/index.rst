@@ -16,9 +16,8 @@ Capabilities
 - some more small utilities
 - more to come...
 
-Note
------
-Work in progress! This library is a collection of tools that I found useful to use for the interpretation of cubed sphere data.
+.. note::
+   Work in progress! This library is a collection of tools that I found useful to use for the interpretation of cubed sphere data.
 
 .. toctree::
    :maxdepth: 1
