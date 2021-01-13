@@ -12,9 +12,9 @@ outdir = "/Volumes/SCRATCH/sim_output/xmitgcm_test/nc_test"
 ds = cs.open_mnc_dataset(outdir, 276480)
 
 # regrid dataset
-regridder = cs.Regridder(ds, 5, 4, reuse_weights=False, filename="weights", concat_mode=False)
+regrid = cs.Regridder(ds, 5, 4, reuse_weights=False, filename="weights", concat_mode=False)
 # Note: once weights were created, we can also reuse files by using reuse_weights=True (saves time).
-ds_reg = regridder.regrid()
+ds_reg = regrid()
 ```
 Only takes few seconds!
 ```python
