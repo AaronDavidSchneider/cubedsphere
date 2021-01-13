@@ -17,13 +17,13 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        "scipy",
         "numpy",
         "matplotlib",
         "xesmf",
         "esmpy",
         "xgcm",
-	"xmitgcm"
+	"xmitgcm",
+	"xarray"
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
