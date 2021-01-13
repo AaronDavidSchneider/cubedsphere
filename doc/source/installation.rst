@@ -57,7 +57,7 @@ Install dependencies:
 
 .. code-block:: bash
 
-    conda install -c conda-forge xesmf esmpy xgcm matplotlib
+    conda install -c conda-forge xesmf esmpy xgcm xmitgcm matplotlib-base xarray
 
 Install cubedsphere:
 
