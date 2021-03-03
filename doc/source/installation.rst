@@ -28,20 +28,6 @@ Install cubedsphere:
 
     conda install -c conda-forge cubedsphere
 
-.. warning::
-   You currently need to perform an extra step to open ascii files (the default MITgcm output).
-   Go to a direction where you store code, open a terminal and type:
-
-   .. code-block:: bash
-
-      git clone https://github.com/MITgcm/xmitgcm.git
-      cd xmitgcm
-      git fetch origin pull/98/head:cs_support
-      git checkout cs_support
-      pip install -e .
-
-   Keep an eye on the PR `#98 <https://github.com/MITgcm/xmitgcm/pull/98>`_. The above steps will not be nescessary anymore once this pullrequest has been merged.
-
 
 Alternative: Installation of development version
 ------------------------------------------------
