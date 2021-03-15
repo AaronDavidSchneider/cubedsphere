@@ -252,26 +252,28 @@ class Regridder:
         to_not_regrid_scalar = to_not_regrid_scalar + _all_vectors
 
         # init grid to interp edge quantities to center
-        grid = init_grid_CS(ds=self._ds)
+        if self._input_type == "cs":
+            grid = init_grid_CS(ds=self._ds)
 
-        # We first need interpolate quantites to the cell center (if nescessary)
-        reg_all = np.all(self._ds[c.i].shape != self._ds[c.i_g].shape)
-        for data in set(self._ds.data_vars) - set(to_not_regrid_scalar):
-            dims = self._ds[data].dims
-            if c.i_g in dims and c.j_g not in dims and reg_all:
-                interp = grid.interp(self._ds[data], to="center", axis=c.i)
-            elif c.j_g in dims and c.i_g not in dims and reg_all:
-                interp = grid.interp(self._ds[data], to="center", axis=c.j)
-            elif c.i_g in dims and c.j_g in dims and reg_all:
-                interp = grid.interp(self._ds[data], to="center", axis=[c.i, c.j])
-            elif c.i_g not in dims and c.j_g not in dims:
-                interp = self._ds[data]
-            else:
-                interp = None
-
-            # Do regridding for scalar data
-            if interp is not None:
-                ds[data] = self._regrid_wrapper(interp, **kwargs)
+            # We first need interpolate quantites to the cell center (if nescessary)
+            reg_all = np.all(self._ds[c.i].shape != self._ds[c.i_g].shape)
+            for data in set(self._ds.data_vars) - set(to_not_regrid_scalar):
+                dims = self._ds[data].dims
+                if c.i_g in dims and c.j_g not in dims and reg_all:
+                    interp = grid.interp(self._ds[data], to="center", axis=c.i)
+                elif c.j_g in dims and c.i_g not in dims and reg_all:
+                    interp = grid.interp(self._ds[data], to="center", axis=c.j)
+                elif c.i_g in dims and c.j_g in dims and reg_all:
+                    interp = grid.interp(self._ds[data], to="center", axis=[c.i, c.j])
+                elif c.i_g not in dims and c.j_g not in dims:
+                    interp = self._ds[data]
+                else:
+                    interp = None
+                if interp is not None:
+                    ds[data] = self._regrid_wrapper(interp, **kwargs)
+        else:
+            for data in set(self._ds.data_vars) - set(to_not_regrid_scalar):
+                ds[data] = self._regrid_wrapper(self._ds[data], **kwargs)
 
 
         # Regridding for vectors
@@ -288,7 +290,7 @@ class Regridder:
                 pass
 
         # remove the face dimension from the dataset
-        if c.FACEDIM in ds.dims:
+        if c.FACEDIM in ds.dims and self._input_type=="cs":
             ds = ds.reset_coords(c.FACEDIM)
 
         # xESMF names longitude lon and latitude lat. We want to rename it to whatever we set in const.py to be consistent
