@@ -42,22 +42,28 @@ class Regridder:
     -----
     You can find more examples in the examples directory
     """
-    def __init__(self, ds, d_lon=5, d_lat=4, input_grid=None, concat_mode=False, filename="weights", method='conservative', **kwargs):
+    def __init__(self, ds, input_type="cs", d_lon=5, d_lat=4, cs_grid=None, concat_mode=False, filename="weights", method='conservative', **kwargs):
         """
         Build the regridder. This step will create the output grid and weight files which will then be used to regrid the dataset.
 
         Parameters
         ----------
         ds: xarray DataSet
-            Dataset to be regridded. Dataset must contain grid information.
+            Dataset to be regridded. Dataset must contain input grid information.
+        input_type: string
+            Needs to be "cs" or "ll". Will result in an error if something else is used here.
+            If "cs": input=cs grid -> regrid to longitude lattitude (ll)
+            If "ll": input=ll grid -> regrid to cs grid
         d_lon: integer
-            Longitude step size, i.e. grid resolution.
+            Longitude step size, i.e. grid resolution. Only used if input_type=="cs".
         d_lat: integer
-            Latitude step size, i.e. grid resolution.
-        input_grid: xarray DataSet
-            use input grid different to ds. Caution with this practice!
+            Latitude step size, i.e. grid resolution. Only used if input_type=="cs".
+        cs_grid: xarray DataSet
+            Dataset containing cubedsphere grid information.
+            If input_type=="cs": Alternative input grid. Caution with this practice! Should be None by default!
+            If input_type=="ll": Output cs grid. Required!
         concat_mode: boolean
-            use one regridding instance instead of one regridder for each face
+            use one regridding instance instead of one regridder for each face. Only used if input_type=="cs".
         filename: string
             filename for weights (weights will be name filename(+ _tile{i}).nc)
         method: string
@@ -67,18 +73,30 @@ class Regridder:
         """
         t = time.time()
         self._ds = ds
-        if input_grid is None:
-            self._ds_grid_in = self._ds
-        else:
-            self._ds_grid_in = input_grid
-            if input_grid != self._ds:
-                print(
-                    "Caution: You chose to use an input grid that is different from the dataset to be regridded,\n"
-                    "Only do so, if you are really sure that the input_grid matches!\n")
+        self._input_type = input_type
 
-        self.grid = self._build_output_grid(d_lon, d_lat)
+        if self._input_type not in ["cs", "ll"]:
+            raise NotImplementedError(f"wrong input_type={self._input_type}. You need to either use input_type='cs' or input_type='ll'.")
+
+        if self._input_type == "cs":
+            if cs_grid is None:
+                self._ds_grid_in = self._ds
+            else:
+                self._ds_grid_in = cs_grid
+                if cs_grid != self._ds:
+                    print(
+                        "Caution: You chose to use an input grid that is different from the dataset to be regridded,\n"
+                        "Only do so, if you are really sure that the input_grid matches!\n")
+
+            self.grid = self._build_output_grid(d_lon, d_lat)
+            self._concat_mode = concat_mode
+        else:
+            self.grid = cs_grid
+            self._ds_grid_in = self._ds
+            self._concat_mode = False
+
         self._method = method
-        self._concat_mode = concat_mode
+
 
         if self._concat_mode:
             self._build_regridder_concat(filename, **kwargs)
@@ -93,30 +111,76 @@ class Regridder:
             print("Caution: The regridding method that you chose might return 0's on borders, double check by plotting the dataset")
 
     def _build_regridder_faces(self, filename, **kwargs):
+        """
+        Wrapper that builds one regridder for every cs-face. Can be used with input_grid=="cs" and input_grid="concat_mode"
+
+        Parameters
+        ----------
+        filename: string
+            filename for weights (weights will be name filename(+ _tile{i}).nc)
+        kwargs:
+            Optional parameters that are passed to xe.Regridder (see xe.Regridder for options).
+
+        """
         if np.all(self._ds_grid_in[c.lat].shape == self._ds_grid_in[c.lat_b].shape):
-            self._method = "nearest_s2d"
-            self._concat_mode = True
-            self._build_regridder_concat(filename, **kwargs)
-            print("falling back to concat mode. The ds you provide has no outer coordinates.")
-            return
+            if self._input_type=="cs":
+                self._method = "nearest_s2d"
+                self._concat_mode = True
+                self._build_regridder_concat(filename, **kwargs)
+                print("falling back to concat mode. The ds you provide has no outer coordinates.")
+                return
+            else:
+                raise NotImplementedError("We need the outer grid corner information to proceed. Pleas provide correct lon_b and lat_b values!")
 
-        self._grid_in = [None] * 6
-        for i in range(6):
-            self._grid_in[i] = {'lat': self._ds_grid_in[c.lat].isel(**{c.FACEDIM: i}),
-                                'lon': self._ds_grid_in[c.lon].isel(**{c.FACEDIM: i}),
-                                'lat_b': self._ds_grid_in[c.lat_b].isel(**{c.FACEDIM: i}),
-                                'lon_b': self._ds_grid_in[c.lon_b].isel(**{c.FACEDIM: i})}
 
-        if self._method in ["nearest_s2d", "nearest_d2s"]:
-            self._method = "conservative"
-            print("falling back to conservative. Nearest neighbour methods aint working for `concat_mode=False`")
+        if self._input_type == "cs":
+            self._grid_in = [None] * 6
+            for i in range(6):
+                self._grid_in[i] = {'lat': self._ds_grid_in[c.lat].isel(**{c.FACEDIM: i}),
+                                    'lon': self._ds_grid_in[c.lon].isel(**{c.FACEDIM: i}),
+                                    'lat_b': self._ds_grid_in[c.lat_b].isel(**{c.FACEDIM: i}),
+                                    'lon_b': self._ds_grid_in[c.lon_b].isel(**{c.FACEDIM: i})}
 
-        self.regridder = [
-            xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method=self._method,
-                         **kwargs)
-            for i in range(6)]
+            if self._method in ["nearest_s2d", "nearest_d2s"]:
+                self._method = "conservative"
+                print("falling back to conservative. Nearest neighbour methods aint working for `concat_mode=False`")
+
+            self.regridder = [
+                xe.Regridder(self._grid_in[i], self.grid, filename=f"{filename}_tile{i + 1}.nc", method=self._method,
+                             **kwargs)
+                for i in range(6)]
+
+        else:
+            # case of input_type=ll
+            try:
+                self._grid_in = {'lat': self._ds_grid_in[c.lat],
+                                 'lon': self._ds_grid_in[c.lon],
+                                 'lat_b': self._ds_grid_in[c.lat_b],
+                                 'lon_b': self._ds_grid_in[c.lon_b]}
+            except KeyError:
+                raise KeyError(f"You need the following horizontal dimensions with matching name in your input dataset: {c.lat}, {c.lon}, {c.lat_b}, {c.lon_b}")
+
+            self.regridder = [
+                xe.Regridder(self._grid_in, self.grid.isel(**{c.FACEDIM: i}), filename=f"{filename}_tile{i + 1}.nc", method=self._method,
+                             **kwargs)
+                for i in range(6)]
 
     def _build_regridder_concat(self, filename, **kwargs):
+        """
+        Wrapper that builds one regridder for the complete cs grid (ie by appending to one horizontal dimension).
+        Only to be used for input_type=="cs".
+
+        Parameters
+        ----------
+        filename: string
+            filename for weights (weights will be name filename(+ _tile{i}).nc)
+        kwargs:
+            Optional parameters that are passed to xe.Regridder (see xe.Regridder for options).
+
+        """
+        if self._input_type != "cs":
+            raise NotImplementedError("concat mode does only work with input_type='cs'")
+
         if self._method != "nearest_s2d":
             if np.all(self._ds_grid_in[c.lon].shape!=self._ds_grid_in[c.lon_b].shape):
                 self._method = "conservative"
@@ -137,6 +201,17 @@ class Regridder:
                                       **kwargs)
 
     def _build_output_grid(self, d_lon, d_lat):
+        """
+        Function that is used to build an output longitude-lattitude (ll) grid for input_type=="cs".
+
+        Parameters
+        ----------
+        d_lon: int
+            longitude step size
+        d_lat: int
+            lattitude step size
+
+        """
         grid = xe.util.grid_global(d_lon, d_lat)
         grid_LL = {'lat': grid["lat"][:, 0].values, 'lon': grid["lon"][0, :].values,
                    'lat_b': grid["lat_b"][:, 0].values, 'lon_b': grid["lon_b"][0, :].values}
@@ -242,25 +317,35 @@ class Regridder:
         numpy array:
             regridded data
         """
-        if len(ds_in.shape) == 5:
-            data_out = np.zeros([ds_in.shape[1], ds_in.shape[2], self.grid['lat'].size, self.grid['lon'].size])
-        elif len(ds_in.shape) == 4:
-            data_out = np.zeros([ds_in.shape[1], self.grid['lat'].size, self.grid['lon'].size])
-        elif len(ds_in.shape) == 3:
-            data_out = np.zeros([self.grid['lat'].size, self.grid['lon'].size])
-        else:
-            if c.FACEDIM in ds_in.dims:
-                assert np.all(ds_in.isel(**{c.FACEDIM:0}) == ds_in.isel(**{c.FACEDIM:1})), "you have a really messed up input dataset!"
-                return ds_in[0]
+        if self._input_type == "cs":
+            if len(ds_in.shape) == 5:
+                data_out = np.zeros([ds_in.shape[1], ds_in.shape[2], self.grid['lat'].size, self.grid['lon'].size])
+            elif len(ds_in.shape) == 4:
+                data_out = np.zeros([ds_in.shape[1], self.grid['lat'].size, self.grid['lon'].size])
+            elif len(ds_in.shape) == 3:
+                data_out = np.zeros([self.grid['lat'].size, self.grid['lon'].size])
             else:
-                return ds_in
-
-        if self._concat_mode:
-            data_out = self.regridder(_flatten_ds(ds_in), **kwargs)
+                if c.FACEDIM in ds_in.dims:
+                    assert np.all(ds_in.isel(**{c.FACEDIM:0}) == ds_in.isel(**{c.FACEDIM:1})), "you have a really messed up input dataset!"
+                    return ds_in[0]
+                else:
+                    return ds_in
+            if self._concat_mode:
+                data_out = self.regridder(_flatten_ds(ds_in), **kwargs)
+            else:
+                for i in range(6):
+                    # add up the results for 6 tiles
+                    data_out += self.regridder[i](ds_in.isel(**{c.FACEDIM: i}), **kwargs)
         else:
+            if len(ds_in.shape) == 4:
+                data_out = np.zeros([ds_in.shape[0], ds_in.shape[1], 6, self.grid['lat'].size, self.grid['lon'].size])
+            elif len(ds_in.shape) == 3:
+                data_out = np.zeros([ds_in.shape[0], 6, self.grid['lat'].size, self.grid['lon'].size])
+            elif len(ds_in.shape) == 2:
+                data_out = np.zeros([6, self.grid['lat'].size, self.grid['lon'].size])
             for i in range(6):
                 # add up the results for 6 tiles
-                data_out += self.regridder[i](ds_in.isel(**{c.FACEDIM:i}), **kwargs)
+                data_out = self.regridder[i](ds_in, **kwargs)
 
         return data_out
 
