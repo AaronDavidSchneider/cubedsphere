@@ -271,27 +271,30 @@ class Regridder:
                     interp = None
                 if interp is not None:
                     ds[data] = self._regrid_wrapper(interp, **kwargs)
+                    # Regridding for vectors
+            for vector in vector_names:
+                try:
+                    # interpolate vectors to cell centers:
+                    interp_UV = grid.interp_2d_vector(
+                        vector={c.i: self._ds[vector.format("U")], c.j: self._ds[vector.format("V")]},
+                        to="center")
+                    # rotate vectors geographic direction:
+                    vector_E, vector_N = self._rotate_vector_to_EN(interp_UV[c.i], interp_UV[c.j],
+                                                                   self._ds[c.AngleCS], self._ds[c.AngleSN])
+                    # perform the regridding:
+                    ds[vector.format("U")] = self._regrid_wrapper(vector_E, **kwargs)
+                    ds[vector.format("V")] = self._regrid_wrapper(vector_N, **kwargs)
+                except KeyError:
+                    pass
+            ds = ds.reset_coords(c.FACEDIM)
+
         else:
+            # case of input_grid = "ll"
             for data in set(self._ds.data_vars) - set(to_not_regrid_scalar):
                 ds[data] = self._regrid_wrapper(self._ds[data], **kwargs)
 
-
-        # Regridding for vectors
-        for vector in vector_names:
-            try:
-                # interpolate vectors to cell centers:
-                interp_UV = grid.interp_2d_vector(vector={c.i: self._ds[vector.format("U")], c.j: self._ds[vector.format("V")]}, to="center")
-                # rotate vectors geographic direction:
-                vector_E, vector_N = self._rotate_vector_to_EN(interp_UV[c.i], interp_UV[c.j], self._ds[c.AngleCS], self._ds[c.AngleSN])
-                # perform the regridding:
-                ds[vector.format("U")] = self._regrid_wrapper(vector_E, **kwargs)
-                ds[vector.format("V")] = self._regrid_wrapper(vector_N, **kwargs)
-            except KeyError:
-                pass
-
-        # remove the face dimension from the dataset
-        if c.FACEDIM in ds.dims and self._input_type=="cs":
-            ds = ds.reset_coords(c.FACEDIM)
+            if len(list(set(_all_vectors).intersection(set(self._ds.data_vars))))>0:
+                raise NotImplementedError("You have some vector quantities in your input dataset. We can not regrid those yet")
 
         # xESMF names longitude lon and latitude lat. We want to rename it to whatever we set in const.py to be consistent
         ds = ds.rename({"lon": c.lon, "lat": c.lat})
