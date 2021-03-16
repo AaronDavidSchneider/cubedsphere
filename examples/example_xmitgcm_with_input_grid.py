@@ -12,7 +12,7 @@ ds_ascii = cs.open_ascii_dataset(outdir_ascii, iternumber=276480)
 ds_nc = cs.open_mnc_dataset(outdir_nc, iternumber=276480)
 
 # regrid dataset
-regrid = cs.Regridder(ds_ascii, d_lon=5, d_lat=4, reuse_weights=False, filename="weights", concat_mode=False, input_grid=ds_nc)
+regrid = cs.Regridder(ds_ascii, d_lon=5, d_lat=4, reuse_weights=False, filename="weights", concat_mode=False, cs_grid=ds_nc)
 # Note: once weights were created, we can also reuse files by using reuse_weights=True (saves time).
 # Note: to test the concat mode, we can also use concat_mode=True
 ds_reg = regrid()
