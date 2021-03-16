@@ -110,7 +110,7 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
 
     return ds
 
-def open_ascii_dataset(outdir, iternumber, **kwargs):
+def open_ascii_dataset(outdir, iternumber, return_grid=True, **kwargs):
     """
     Wrapper that opens simulation outputs from standard mitgcm outputs.
 
@@ -120,6 +120,9 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
         Output directory
     iternumber: List or integer or None
         See xmitgcm iters, can be a iterationnumber or 'all'
+    return_grid: Boolean
+        Return a grid generated with xmitgcm.get_grid_from_input
+
     **kwargs
         everything else that is passed to xmitgcm
 
@@ -127,9 +130,23 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
     ----------
     ds: xarray Dataset
         Dataset of simulation output
+    grid: xarray Dataset
+        Only if return_grid is True
+        Grid generated with xmitgcm.get_grid_from_input.
     """
     ds = xmitgcm.open_mdsdataset(data_dir=outdir, iters=iternumber, grid_vars_to_coords=True, geometry="cs", **kwargs).load()
     ds = _swap_vertical_coords(ds)
+
+    if return_grid:
+        # Note: This needs https://github.com/MITgcm/xmitgcm/pull/246 to work
+        em = xmitgcm.utils.get_extra_metadata(domain='cs', nx=ds["XC"].shape[0])
+        grid = xmitgcm.utils.get_grid_from_input(
+            f'{outdir}/grid_cs32.face<NFACET>.bin',
+            geometry='cs',
+            extra_metadata=em,
+            outer=True).load()
+
+        grid = grid.rename({'XC':c.lon, 'YC':c.lat, 'XG':c.lon_b, 'YG':c.lat_b})
 
     # You might need to extend this if you plan to change values in const.py!
     _rename_dict = {'XC': c.lon,
@@ -167,7 +184,10 @@ def open_ascii_dataset(outdir, iternumber, **kwargs):
     ds = ds.rename(_rename_dict)
     ds = ds.transpose(c.FACEDIM,...)
 
-    return ds
+    if return_grid:
+        return ds, grid
+    else:
+        return ds
 
 def _swap_vertical_coords(ds, drop_old=True):
     """

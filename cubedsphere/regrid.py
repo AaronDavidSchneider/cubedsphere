@@ -246,7 +246,7 @@ class Regridder:
         to_not_regrid_scalar = [c.lon_b, c.lon, c.lat_b, c.lat, c.drF, c.drC, c.drS, c.dxG, c.dxC, c.drW, c.dyC, c.dyG,
                                 c.dxF, c.dyU, c.dxV, c.dyF,
                                 c.HFacC, c.HFacW, c.HFacS, c.rAz, c.rA, c.rAw, c.rAs, c.AngleSN,
-                                c.AngleCS]
+                                c.AngleCS, c.FACEDIM]
 
         # We need to rotate scalar values first
         to_not_regrid_scalar = to_not_regrid_scalar + _all_vectors
@@ -294,7 +294,7 @@ class Regridder:
                 ds[data] = self._regrid_wrapper(self._ds[data], **kwargs)
 
             if len(list(set(_all_vectors).intersection(set(self._ds.data_vars))))>0:
-                raise NotImplementedError("You have some vector quantities in your input dataset. We can not regrid those yet")
+                print("WARNING: You have some vector quantities in your input dataset. We can not regrid those yet.")
 
         # xESMF names longitude lon and latitude lat. We want to rename it to whatever we set in const.py to be consistent
         ds = ds.rename({"lon": c.lon, "lat": c.lat})
@@ -342,15 +342,12 @@ class Regridder:
                     # add up the results for 6 tiles
                     data_out += self.regridder[i](ds_in.isel(**{c.FACEDIM: i}), **kwargs)
         else:
-            if len(ds_in.shape) == 4:
-                data_out = np.zeros([ds_in.shape[0], ds_in.shape[1], 6, self.grid['lat'].size, self.grid['lon'].size])
-            elif len(ds_in.shape) == 3:
-                data_out = np.zeros([ds_in.shape[0], 6, self.grid['lat'].size, self.grid['lon'].size])
-            elif len(ds_in.shape) == 2:
-                data_out = np.zeros([6, self.grid['lat'].size, self.grid['lon'].size])
+            data_out_list = []
             for i in range(6):
                 # add up the results for 6 tiles
-                data_out = self.regridder[i](ds_in, **kwargs)
+                data_out_list.append(self.regridder[i](ds_in, **kwargs))
+
+            data_out = xr.concat(data_out_list,dim=c.FACEDIM)
 
         return data_out
 

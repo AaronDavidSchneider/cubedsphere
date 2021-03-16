@@ -57,29 +57,24 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
     x_dim, y_dim = c.lon, c.lat
 
     if len(ds[c.lon].shape) > 2:
-        if ds[c.lon].shape[-1] == dr.shape[-1]:
+        if ds[c.lon].shape[-1] == dr[c.lon].shape[-1]:
             x_dim = c.lon
             x = _flatten_ds(ds[x_dim]).values
             data = _flatten_ds(dr).values
-        elif ds[c.lon_b].shape[-1] == dr.shape[-1]:
-            x_dim = c.lon_b
-            x = _flatten_ds(ds[x_dim]).values
-            data = _flatten_ds(dr).values
-        if ds[c.lat].shape[-2] == dr.shape[-2]:
+        else:
+            raise IndexError("your dataset is incompatible")
+
+        if ds[c.lat].shape[-2] == dr[c.lat].shape[-2]:
             y_dim = c.lat
             y = _flatten_ds(ds[y_dim]).values
-        elif ds[c.lat_b].shape[-2] == dr.shape[-2]:
-            y_dim = c.lat_b
-            y = _flatten_ds(ds[y_dim]).values
+        else:
+            raise IndexError("your dataset is incompatible")
 
     else:
         x = ds[x_dim].values
         y = ds[y_dim].values
         data = dr.values
-    #assert dr.shape == ds[
-    #    x_dim].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds[x_dim].shape}"
-    #assert dr.shape == ds[
-    #    y_dim].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds[y_dim].shape}"
+
 
     if mask_size is not None:
         try:
@@ -87,9 +82,10 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
             data = np.ma.masked_where(mask, data)
         except IndexError:
             print("caution: No masking possible!")
-
-    return _plot_cs_raw(x, y, data, **kwargs)
-
+    try:
+        return _plot_cs_raw(x, y, data, **kwargs)
+    except IndexError:
+        return _plot_cs_raw(x.T, y.T, data.T, **kwargs)
 
 def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
     """
