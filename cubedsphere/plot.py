@@ -10,7 +10,7 @@ from matplotlib import cm
 import cubedsphere.const as c
 from .utils import _flatten_ds
 
-def overplot_wind(ds_reg, U, V, stepsize=1):
+def overplot_wind(ds_reg, U, V, stepsize=1, **kwargs):
     """
     Quick and dirty function for overplotting wind of a regridded dataset
 
@@ -25,7 +25,7 @@ def overplot_wind(ds_reg, U, V, stepsize=1):
     y, x = ds_reg["lat"].values, ds_reg["lon"].values
     xmesh, ymesh = np.meshgrid(x, y)
     ax.quiver(xmesh[::stepsize, ::stepsize], ymesh[::stepsize, ::stepsize], U[::stepsize, ::stepsize],
-              V[::stepsize, ::stepsize])
+              V[::stepsize, ::stepsize], **kwargs)
 
 
 
