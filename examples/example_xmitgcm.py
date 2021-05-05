@@ -3,13 +3,13 @@ import cubedsphere as cs
 import cubedsphere.const as c
 
 # Specify directory where the output files can be found
-outdir_ascii = "/Volumes/SCRATCH/sim_output/xmitgcm_test/ascii_test"
+outdir_ascii = "/STER/schneider/codes/exorad/exo_veri/wasp43b/run"
 
 # open Dataset
-ds_ascii = cs.open_ascii_dataset(outdir_ascii, iternumber=276480)
+ds_ascii, grid = cs.open_ascii_dataset(outdir_ascii, iternumber=380160, ignore_unknown_vars=True, return_grid=True)
 
 # regrid dataset
-regrid = cs.Regridder(ds_ascii, d_lon=5, d_lat=4, reuse_weights=False, filename="weights", concat_mode=False)
+regrid = cs.Regridder(ds_ascii, d_lon=5, d_lat=4, reuse_weights=False, filename="weights", concat_mode=False, cs_grid=grid)
 # Note: once weights were created, we can also reuse files by using reuse_weights=True (saves time).
 # Note: to test the concat mode, we can also use concat_mode=True
 ds_reg = regrid()

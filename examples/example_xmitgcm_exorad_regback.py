@@ -3,10 +3,10 @@ import cubedsphere as cs
 import cubedsphere.const as c
 
 # Specify directory where the output files can be found
-outdir_ascii = "/Users/schneider/codes/exo/exorad/exorad_build/run"
+outdir_ascii = "/Users/schneider/codes/exo/exorad/exo_veri/exorad_full/run"
 
 # open Dataset
-ds_ascii, grid = cs.open_ascii_dataset(outdir_ascii, iternumber=10)
+ds_ascii, grid = cs.open_ascii_dataset(outdir_ascii, iternumber=100)
 
 # converts wind
 ds_ascii = cs.exorad_postprocessing(ds_ascii, outdir=outdir_ascii)
@@ -31,7 +31,7 @@ isel_dict = {c.time:0, c.Z:20}
 fig = plt.figure(figsize=(8,6), constrained_layout=True)
 ds_reg[c.T].isel(**isel_dict).plot(add_colorbar=False)
 U, V = ds_reg["U"].isel(**isel_dict).values, ds_reg["V"].isel(**isel_dict).values
-cs.overplot_wind(ds_reg, U, V)
+#cs.overplot_wind(ds_reg, U, V)
 plt.gca().set_aspect('equal')
 plt.show()
 

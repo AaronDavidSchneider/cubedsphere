@@ -21,7 +21,8 @@ def overplot_wind(ds_reg, U, V, stepsize=1, **kwargs):
     stepsize: integer
         specify the stepsize for which wind arrows should be plotted
     """
-    ax = plt.gca()
+
+    ax = kwargs.pop("ax",plt.gca())
     y, x = ds_reg["lat"].values, ds_reg["lon"].values
     xmesh, ymesh = np.meshgrid(x, y)
     ax.quiver(xmesh[::stepsize, ::stepsize], ymesh[::stepsize, ::stepsize], U[::stepsize, ::stepsize],
