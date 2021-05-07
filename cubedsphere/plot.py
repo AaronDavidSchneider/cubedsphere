@@ -10,7 +10,7 @@ from matplotlib import cm
 import cubedsphere.const as c
 from .utils import _flatten_ds
 
-def overplot_wind(ds_reg, U, V, stepsize=1):
+def overplot_wind(ds_reg, U, V, stepsize=1, **kwargs):
     """
     Quick and dirty function for overplotting wind of a regridded dataset
 
@@ -21,11 +21,12 @@ def overplot_wind(ds_reg, U, V, stepsize=1):
     stepsize: integer
         specify the stepsize for which wind arrows should be plotted
     """
-    ax = plt.gca()
+
+    ax = kwargs.pop("ax",plt.gca())
     y, x = ds_reg["lat"].values, ds_reg["lon"].values
     xmesh, ymesh = np.meshgrid(x, y)
     ax.quiver(xmesh[::stepsize, ::stepsize], ymesh[::stepsize, ::stepsize], U[::stepsize, ::stepsize],
-              V[::stepsize, ::stepsize])
+              V[::stepsize, ::stepsize], **kwargs)
 
 
 
@@ -57,29 +58,24 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
     x_dim, y_dim = c.lon, c.lat
 
     if len(ds[c.lon].shape) > 2:
-        if ds[c.lon].shape[-1] == dr.shape[-1]:
+        if ds[c.lon].shape[-1] == dr[c.lon].shape[-1]:
             x_dim = c.lon
             x = _flatten_ds(ds[x_dim]).values
             data = _flatten_ds(dr).values
-        elif ds[c.lon_b].shape[-1] == dr.shape[-1]:
-            x_dim = c.lon_b
-            x = _flatten_ds(ds[x_dim]).values
-            data = _flatten_ds(dr).values
-        if ds[c.lat].shape[-2] == dr.shape[-2]:
+        else:
+            raise IndexError("your dataset is incompatible")
+
+        if ds[c.lat].shape[-2] == dr[c.lat].shape[-2]:
             y_dim = c.lat
             y = _flatten_ds(ds[y_dim]).values
-        elif ds[c.lat_b].shape[-2] == dr.shape[-2]:
-            y_dim = c.lat_b
-            y = _flatten_ds(ds[y_dim]).values
+        else:
+            raise IndexError("your dataset is incompatible")
 
     else:
         x = ds[x_dim].values
         y = ds[y_dim].values
         data = dr.values
-    #assert dr.shape == ds[
-    #    x_dim].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds[x_dim].shape}"
-    #assert dr.shape == ds[
-    #    y_dim].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds[y_dim].shape}"
+
 
     if mask_size is not None:
         try:
@@ -87,9 +83,10 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
             data = np.ma.masked_where(mask, data)
         except IndexError:
             print("caution: No masking possible!")
-
-    return _plot_cs_raw(x, y, data, **kwargs)
-
+    try:
+        return _plot_cs_raw(x, y, data, **kwargs)
+    except IndexError:
+        return _plot_cs_raw(x.T, y.T, data.T, **kwargs)
 
 def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
     """

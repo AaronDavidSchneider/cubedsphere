@@ -19,10 +19,10 @@ setuptools.setup(
     install_requires=[
         "numpy",
         "matplotlib",
-        "xesmf",
+        "xesmf>0.5.0",
         "esmpy",
         "xgcm",
-        "xmitgcm",
+        "xmitgcm>0.5.0",
         "xarray"
     ],
     classifiers=[

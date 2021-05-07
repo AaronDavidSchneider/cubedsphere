@@ -3,7 +3,7 @@ import cubedsphere as cs
 import cubedsphere.const as c
 
 # Specify directory where the output files can be found
-outdir_ascii = "/Volumes/SCRATCH/sim_output/xmitgcm_test/exorad"
+outdir_ascii = "/Users/schneider/codes/exo/exorad/exorad_build/run"
 
 # open Dataset
 ds_ascii = cs.open_ascii_dataset(outdir_ascii, iternumber=1)
@@ -12,7 +12,7 @@ ds_ascii = cs.open_ascii_dataset(outdir_ascii, iternumber=1)
 ds_ascii = cs.exorad_postprocessing(ds_ascii, outdir=outdir_ascii)
 
 # regrid dataset
-regrid = cs.Regridder(ds_ascii, 5, 4, reuse_weights=False, filename="weights", concat_mode=False)
+regrid = cs.Regridder(ds_ascii, d_lon=5, d_lat=4, reuse_weights=False, filename="weights", concat_mode=False)
 # Note: once weights were created, we can also reuse files by using reuse_weights=True (saves time).
 # Note: to test the concat mode, we can also use concat_mode=True
 ds_reg = regrid()

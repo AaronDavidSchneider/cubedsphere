@@ -9,7 +9,7 @@ outdir_ascii = "/Volumes/SCRATCH/sim_output/xmitgcm_test/ascii_test"
 ds_ascii = cs.open_ascii_dataset(outdir_ascii, iternumber=276480)
 
 # regrid dataset
-regrid = cs.Regridder(ds_ascii, 5, 4, reuse_weights=False, filename="weights", concat_mode=True)
+regrid = cs.Regridder(ds_ascii, d_lon=5, d_lat=4, reuse_weights=False, filename="weights", concat_mode=True)
 # Note: once weights were created, we can also reuse files by using reuse_weights=True (saves time).
 # Note: to test the concat mode, we can also use concat_mode=True
 ds_reg = regrid()
