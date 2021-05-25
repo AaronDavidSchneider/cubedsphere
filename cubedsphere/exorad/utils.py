@@ -2,6 +2,7 @@ import cubedsphere as cs
 import cubedsphere.const as c
 import numpy as np
 import os
+import astropy.units as u
 
 def get_parameter(datafile, keyword):
     """
@@ -35,7 +36,70 @@ def get_parameter(datafile, keyword):
         if not valueFound:
             raise NameError(r'No value could be associated with the keyword: '+keyword)
 
-def exorad_postprocessing(ds, outdir=None, datafile=None):
+def convert_vertical_to_bar(ds, dim):
+    """
+    Convert the vertical dimension to bar.
+
+    Parameters
+    ----------
+    ds: Dataset
+        dataset to be converted
+    dim: str
+        Vertical dimension to be converted
+
+    Returns
+    -------
+    ds: Dataset
+        dataset with converted dimension
+    """
+    ds[dim] = (np.array(ds[dim]) * u.Pa).to(u.bar).value
+    return ds
+
+def convert_winds_and_T(ds, T_dim, W_dim):
+    """
+    Convert winds and temperature in dataset.
+    Winds are converted from Pa/s to m/s.
+    Temperatures are converted from potential temperature to ordinary temperature
+
+    Parameters
+    ----------
+    ds: Dataset
+        dataset to be converted
+    T_dim: str
+        temperature datadimension to be converted
+    W_dim: str
+        vertical wind datadimension to be converted
+
+    Returns
+    -------
+    ds: Dataset
+        dataset with converted dimension
+    """
+    kappa = ds.attrs["R"] / ds.attrs["cp"]
+    ds[T_dim] = ds[T_dim] * (ds[c.Z] / ds.attrs["p_ref"]) ** kappa
+
+    # calculate scale height
+    H = ds.attrs["R"] / ds.attrs["g"] * ds[T_dim]
+
+    # calculate geometric height, not needed here ?!
+    z = - H * np.log(ds[c.Z] / ds.attrs["p_ref"])
+
+    if W_dim in ds:
+        # interpolate vertical windspeed to cell center:
+        if c.FACEDIM in ds.dims:
+            grid = cs.init_grid_CS(ds=ds)
+        else:
+            grid = cs.init_grid_LL(ds=ds)
+
+        W_interp = grid.interp(ds[W_dim], axis=c.Z, to="center")
+
+        # convert vertical wind speed from Pa/s to m/s
+        ds[W_dim] = - W_interp * H / ds[c.Z]
+
+    return ds
+
+
+def exorad_postprocessing(ds, outdir=None, datafile=None, convert_to_bar=True, convert_to_days=True):
     """
     Preliminaray postprocessing on exorad dataset.
     This function converts the vertical windspeed from Pa into meters and saves attributes to the dataset.
@@ -48,6 +112,10 @@ def exorad_postprocessing(ds, outdir=None, datafile=None):
         directory in which to find the data file (following the convention f'{outdir}/data')
     datafile: string
         alternatively specify datafile directly
+    convert_to_bar: (Optional) bool
+        convert vertical pressure dimension to bar
+    convert_to_days: (Optional) bool
+        convert time dimension to days
 
     Returns
     ----------
@@ -69,26 +137,19 @@ def exorad_postprocessing(ds, outdir=None, datafile=None):
 
     ds.attrs.update(attrs)
 
-    kappa = attrs["R"] / attrs["cp"]
+    # Convert Temperature and winds
+    if c.T in ds:
+        ds = convert_winds_and_T(ds, c.T, c.W)
+    if c.Ttave in ds:
+        ds = convert_winds_and_T(ds, c.Ttave, c.wVeltave)
 
-    # Convert Temperature
-    ds[c.T] = ds[c.T]*(ds[c.Z] / attrs["p_ref"]) ** kappa
+    if convert_to_bar:
+        for dim in {c.Z, c.Z_l, c.Z_p1, c.Z_u}:
+            if dim in ds.dims:
+                ds = convert_vertical_to_bar(ds, dim)
 
-    # calculate scale height
-    H = attrs["R"] / attrs["g"] * ds[c.T]
+    if convert_to_days:
+        ds[c.time] = ds.iter * ds.attrs["dt"] / (3600 * 24)
 
-    # calculate geometric height, not needed here ?!
-    z = - H * np.log(ds[c.Z] / attrs["p_ref"])
-
-    # interpolate vertical windspeed to cell center:
-    if c.FACEDIM in ds.dims:
-        grid = cs.init_grid_CS(ds=ds)
-    else:
-        grid = cs.init_grid_LL(ds=ds)
-
-    W_interp = grid.interp(ds[c.W], axis=c.Z, to="center")
-
-    # convert vertical wind speed from Pa/s to m/s
-    ds[c.W] = - W_interp * H / ds[c.Z]
 
     return ds

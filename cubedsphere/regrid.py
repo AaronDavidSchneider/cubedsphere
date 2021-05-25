@@ -259,6 +259,13 @@ class Regridder:
         if self._input_type == "cs":
             grid = init_grid_CS(ds=self._ds)
 
+            face_vis_data = np.zeros((len(self._ds[c.FACEDIM]), len(self._ds[c.i]), len(self._ds[c.j])))
+            for i in self._ds[c.FACEDIM]:
+                face_vis_data[i] = i
+
+            self._ds["face_vis"] = xr.DataArray(face_vis_data, coords=[self._ds[c.FACEDIM], self._ds[c.i], self._ds[c.j]],
+                                                dims=[c.FACEDIM, c.i, c.j])
+
             # We first need interpolate quantites to the cell center (if nescessary)
             reg_all = np.all(self._ds[c.i].shape != self._ds[c.i_g].shape)
             for data in set(self._ds.data_vars) - set(to_not_regrid_scalar):

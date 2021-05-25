@@ -110,7 +110,7 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
 
     return ds
 
-def open_ascii_dataset(outdir, iternumber, return_grid=True, **kwargs):
+def open_ascii_dataset(outdir, return_grid=True, **kwargs):
     """
     Wrapper that opens simulation outputs from standard mitgcm outputs.
 
@@ -118,8 +118,6 @@ def open_ascii_dataset(outdir, iternumber, return_grid=True, **kwargs):
     ----------
     outdir: string
         Output directory
-    iternumber: List or integer or None
-        See xmitgcm iters, can be a iterationnumber or 'all'
     return_grid: Boolean
         Return a grid generated with xmitgcm.get_grid_from_input
 
@@ -134,8 +132,11 @@ def open_ascii_dataset(outdir, iternumber, return_grid=True, **kwargs):
         Only if return_grid is True
         Grid generated with xmitgcm.get_grid_from_input.
     """
-    ds = xmitgcm.open_mdsdataset(data_dir=outdir, iters=iternumber, grid_vars_to_coords=True, geometry="cs", **kwargs).load()
-    ds = _swap_vertical_coords(ds)
+    ds = xmitgcm.open_mdsdataset(data_dir=outdir, grid_vars_to_coords=True, geometry="cs", **kwargs).load()
+    try:
+        ds = _swap_vertical_coords(ds)
+    except (ValueError, KeyError):
+        print("vertical dimensions could not be swapped. Keeping logical dimensions.")
 
     if return_grid:
         # Note: This needs https://github.com/MITgcm/xmitgcm/pull/246 to work
@@ -181,8 +182,12 @@ def open_ascii_dataset(outdir, iternumber, return_grid=True, **kwargs):
                     'T':c.T
                     }
 
-    ds = ds.rename(_rename_dict)
+    try:
+        ds = ds.rename(_rename_dict)
+    except ValueError as error:
+        print(f"could not rename, got error: {error}")
     ds = ds.transpose(c.FACEDIM,...)
+
 
     if return_grid:
         return ds, grid
