@@ -23,7 +23,8 @@ setuptools.setup(
         "esmpy",
         "xgcm",
         "xmitgcm>0.5.0",
-        "xarray"
+        "xarray",
+        "f90nml"
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

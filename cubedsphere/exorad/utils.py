@@ -3,6 +3,18 @@ import cubedsphere.const as c
 import numpy as np
 import os
 import astropy.units as u
+from f90nml import Parser
+
+
+class MITgcmDataParser(Parser):
+    def __init__(self):
+        super().__init__()
+        self.comment_tokens += '#'
+        self.end_comma = True
+        self.indent = " "
+        self.column_width = 72
+        self.sparse_arrays = True
+
 
 def get_parameter(datafile, keyword):
     """
@@ -22,19 +34,19 @@ def get_parameter(datafile, keyword):
         The value associated with the given keyword is returned as a string (!).
     """
 
-    # Check if the data file exists
     if not os.path.isfile(datafile):
-        raise FileNotFoundError('Data file not found at: '+datafile)
-    else: # if it does:
-        valueFound = False
-        with open(datafile, 'r') as f:
-            for line in f.readlines():
-                if keyword in line and line[0] != '#':
-                    value = line.split(keyword+'=', 1)[1].rstrip().rstrip(',')
-                    valueFound = True
-                    return value
-        if not valueFound:
-            raise NameError(r'No value could be associated with the keyword: '+keyword)
+        raise FileNotFoundError("could not find the datafile.")
+
+    parser = MITgcmDataParser()
+    data = parser.read(datafile)
+
+    for section in data:
+        for key, val in data[section].items():
+            if key.lower() == keyword.lower():
+                return val
+
+    raise KeyError("Keyword not found")
+
 
 def convert_vertical_to_bar(ds, dim):
     """
