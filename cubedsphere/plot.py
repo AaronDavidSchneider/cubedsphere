@@ -3,12 +3,12 @@ Library of utilities that can be used for plotting
 """
 
 import numpy as np
-
-from matplotlib import pyplot as plt
 from matplotlib import cm
+from matplotlib import pyplot as plt
 
 import cubedsphere.const as c
 from .utils import _flatten_ds
+
 
 def overplot_wind(ds_reg, U, V, stepsize=1, **kwargs):
     """
@@ -22,12 +22,11 @@ def overplot_wind(ds_reg, U, V, stepsize=1, **kwargs):
         specify the stepsize for which wind arrows should be plotted
     """
 
-    ax = kwargs.pop("ax",plt.gca())
+    ax = kwargs.pop("ax", plt.gca())
     y, x = ds_reg["lat"].values, ds_reg["lon"].values
     xmesh, ymesh = np.meshgrid(x, y)
     ax.quiver(xmesh[::stepsize, ::stepsize], ymesh[::stepsize, ::stepsize], U[::stepsize, ::stepsize],
               V[::stepsize, ::stepsize], **kwargs)
-
 
 
 def plotCS(dr, ds, mask_size=None, **kwargs):
@@ -76,7 +75,6 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
         y = ds[y_dim].values
         data = dr.values
 
-
     if mask_size is not None:
         try:
             mask = np.abs(x - 180) < mask_size
@@ -87,6 +85,7 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
         return _plot_cs_raw(x, y, data, **kwargs)
     except IndexError:
         return _plot_cs_raw(x.T, y.T, data.T, **kwargs)
+
 
 def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
     """
@@ -265,12 +264,10 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
 
     return ph
 
+
 def _sph2cart(azim_sph_coord, elev_sph_coord):
     r = np.cos(elev_sph_coord)
     x = -r * np.sin(azim_sph_coord)
     y = r * np.cos(azim_sph_coord)
     z = np.sin(elev_sph_coord)
     return x, y, z
-
-
-

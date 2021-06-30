@@ -2,10 +2,12 @@
 Helper functions used throughout this package and utilities to open datasets using xmitgcm and mnc
 """
 
+import sys
 import xarray as xr
 import xmitgcm
+
 import cubedsphere.const as c
-import sys
+
 
 def _flatten_ds(ds):
     """
@@ -26,13 +28,15 @@ def _flatten_ds(ds):
     else:
         return xr.concat([ds.isel(**{c.FACEDIM: i}) for i in range(6)], dim=c.i_g)
 
+
 def _add_swap_dim_attr(ds):
     for dim in c.vertical_dict.keys():
         ds[dim].attrs["swap_dim"] = c.vertical_dict[dim]
 
     return ds
 
-def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "dynDiag", "surfDiag"]):
+
+def open_mnc_dataset(outdir, iternumber, fname_list=["state", "secmomDiag", "dynDiag", "surfDiag"]):
     """
     Wrapper that opens simulation outputs from mnc outputs.
 
@@ -54,7 +58,8 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
 
     dataset_list = []
     for fname in fname_list:
-        dataset = [xr.open_dataset("{}/{}.{:010d}.t{:03d}.nc".format(outdir, fname, iternumber, i)) for i in range(1, 7)]
+        dataset = [xr.open_dataset("{}/{}.{:010d}.t{:03d}.nc".format(outdir, fname, iternumber, i)) for i in
+                   range(1, 7)]
         dataset_list.append(xr.concat(dataset, dim=range(6)))
 
     dataset_list = [ds_i.reset_coords(["XC", "YC"]) if "XC" in ds_i.coords else ds_i for ds_i in dataset_list]
@@ -110,6 +115,7 @@ def open_mnc_dataset(outdir, iternumber, fname_list = ["state", "secmomDiag", "d
 
     return ds
 
+
 def open_ascii_dataset(outdir, return_grid=True, **kwargs):
     """
     Wrapper that opens simulation outputs from standard mitgcm outputs.
@@ -132,7 +138,12 @@ def open_ascii_dataset(outdir, return_grid=True, **kwargs):
         Only if return_grid is True
         Grid generated with xmitgcm.get_grid_from_input.
     """
-    ds = xmitgcm.open_mdsdataset(data_dir=outdir, grid_vars_to_coords=True, geometry="cs", **kwargs).load()
+
+    extra_variables = kwargs.pop("extra_variables", {})
+    extra_variables.update(c.extra_exorad_variables)
+
+    ds = xmitgcm.open_mdsdataset(data_dir=outdir, grid_vars_to_coords=True, geometry="cs",
+                                 extra_variables=extra_variables, **kwargs).load()
     try:
         ds = _swap_vertical_coords(ds)
     except (ValueError, KeyError):
@@ -147,7 +158,7 @@ def open_ascii_dataset(outdir, return_grid=True, **kwargs):
             extra_metadata=em,
             outer=True).load()
 
-        grid = grid.rename({'XC':c.lon, 'YC':c.lat, 'XG':c.lon_b, 'YG':c.lat_b})
+        grid = grid.rename({'XC': c.lon, 'YC': c.lat, 'XG': c.lon_b, 'YG': c.lat_b})
 
     # You might need to extend this if you plan to change values in const.py!
     _rename_dict = {'XC': c.lon,
@@ -179,20 +190,20 @@ def open_ascii_dataset(outdir, return_grid=True, **kwargs):
                     'rAz': c.rAz,
                     'rAs': c.rAs,
                     'rAw': c.rAw,
-                    'T':c.T
+                    'T': c.T
                     }
 
     try:
         ds = ds.rename(_rename_dict)
     except ValueError as error:
         print(f"could not rename, got error: {error}")
-    ds = ds.transpose(c.FACEDIM,...)
-
+    ds = ds.transpose(c.FACEDIM, ...)
 
     if return_grid:
         return ds, grid
     else:
         return ds
+
 
 def _swap_vertical_coords(ds, drop_old=True):
     """
@@ -234,7 +245,7 @@ def _swap_vertical_coords(ds, drop_old=True):
     for orig_dim in ds.dims:
         if 'swap_dim' in ds[orig_dim].attrs and orig_dim in c.vertical_dict.keys():
             new_dim = ds[orig_dim].attrs['swap_dim']
-            ds = ds.swap_dims({orig_dim:  new_dim})
+            ds = ds.swap_dims({orig_dim: new_dim})
             if drop_old:
                 if sys.version_info[0] < 3:
                     ds = ds.drop(orig_dim)

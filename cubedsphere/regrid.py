@@ -2,11 +2,12 @@
 Module for regridding cubedsphere datasets
 Inspired from https://github.com/JiaweiZhuang/cubedsphere/blob/master/example_notebooks/C2L_regrid.ipynb
 """
-import xesmf as xe
-import xarray as xr
 import numpy as np
-import warnings
 import time
+import warnings
+import xarray as xr
+import xesmf as xe
+
 import cubedsphere.const as c
 from .grid import init_grid_CS
 from .utils import _flatten_ds
@@ -42,7 +43,9 @@ class Regridder:
     -----
     You can find more examples in the examples directory
     """
-    def __init__(self, ds, input_type="cs", d_lon=5, d_lat=4, cs_grid=None, concat_mode=False, filename="weights", method='conservative', **kwargs):
+
+    def __init__(self, ds, input_type="cs", d_lon=5, d_lat=4, cs_grid=None, concat_mode=False, filename="weights",
+                 method='conservative', **kwargs):
         """
         Build the regridder. This step will create the output grid and weight files which will then be used to regrid the dataset.
 
@@ -76,7 +79,8 @@ class Regridder:
         self._input_type = input_type
 
         if self._input_type not in ["cs", "ll"]:
-            raise NotImplementedError(f"wrong input_type={self._input_type}. You need to either use input_type='cs' or input_type='ll'.")
+            raise NotImplementedError(
+                f"wrong input_type={self._input_type}. You need to either use input_type='cs' or input_type='ll'.")
 
         if self._input_type == "cs":
             if cs_grid is None:
@@ -97,7 +101,6 @@ class Regridder:
 
         self._method = method
 
-
         if self._concat_mode:
             self._build_regridder_concat(filename, **kwargs)
         else:
@@ -105,10 +108,11 @@ class Regridder:
 
         print(f"time needed to build regridder: {time.time() - t}")
         print(f"Regridder will use {self._method} method")
-        if self._method not in ["patch","conservative"]:
+        if self._method not in ["patch", "conservative"]:
             print("Caution: The regridding method that you chose might not conserve fluxes")
         if self._method not in ["conservative", "nearest_s2d"]:
-            print("Caution: The regridding method that you chose might return 0's on borders, double check by plotting the dataset")
+            print(
+                "Caution: The regridding method that you chose might return 0's on borders, double check by plotting the dataset")
 
     def _build_regridder_faces(self, filename, **kwargs):
         """
@@ -123,15 +127,15 @@ class Regridder:
 
         """
         if np.all(self._ds_grid_in[c.lat].shape == self._ds_grid_in[c.lat_b].shape):
-            if self._input_type=="cs":
+            if self._input_type == "cs":
                 self._method = "nearest_s2d"
                 self._concat_mode = True
                 self._build_regridder_concat(filename, **kwargs)
                 print("falling back to concat mode. The ds you provide has no outer coordinates.")
                 return
             else:
-                raise NotImplementedError("We need the outer grid corner information to proceed. Pleas provide correct lon_b and lat_b values!")
-
+                raise NotImplementedError(
+                    "We need the outer grid corner information to proceed. Pleas provide correct lon_b and lat_b values!")
 
         if self._input_type == "cs":
             self._grid_in = [None] * 6
@@ -158,10 +162,12 @@ class Regridder:
                                  'lat_b': self._ds_grid_in[c.lat_b],
                                  'lon_b': self._ds_grid_in[c.lon_b]}
             except KeyError:
-                raise KeyError(f"You need the following horizontal dimensions with matching name in your input dataset: {c.lat}, {c.lon}, {c.lat_b}, {c.lon_b}")
+                raise KeyError(
+                    f"You need the following horizontal dimensions with matching name in your input dataset: {c.lat}, {c.lon}, {c.lat_b}, {c.lon_b}")
 
             self.regridder = [
-                xe.Regridder(self._grid_in, self.grid.isel(**{c.FACEDIM: i}), filename=f"{filename}_tile{i + 1}.nc", method=self._method,
+                xe.Regridder(self._grid_in, self.grid.isel(**{c.FACEDIM: i}), filename=f"{filename}_tile{i + 1}.nc",
+                             method=self._method,
                              **kwargs)
                 for i in range(6)]
 
@@ -182,22 +188,24 @@ class Regridder:
             raise NotImplementedError("concat mode does only work with input_type='cs'")
 
         if self._method != "nearest_s2d":
-            if np.all(self._ds_grid_in[c.lon].shape!=self._ds_grid_in[c.lon_b].shape):
+            if np.all(self._ds_grid_in[c.lon].shape != self._ds_grid_in[c.lon_b].shape):
                 self._method = "conservative"
                 self._concat_mode = False
                 print(
                     f"falling back to {self._method} and `concat_mode={self._concat_mode}: The interpolation method you chose doesn't work with your grid geometry")
 
-                self._build_regridder_faces(filename,**kwargs)
+                self._build_regridder_faces(filename, **kwargs)
                 return
             else:
                 self._method = "nearest_s2d"
-                print(f"falling back to {self._method}: The interpolation method you chose doesn't work with your grid geometry")
+                print(
+                    f"falling back to {self._method}: The interpolation method you chose doesn't work with your grid geometry")
 
         self._grid_in = {'lat': _flatten_ds(self._ds_grid_in[c.lat]),
                          'lon': _flatten_ds(self._ds_grid_in[c.lon])}
 
-        self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method, periodic=False,
+        self.regridder = xe.Regridder(self._grid_in, self.grid, filename=f"{filename}.nc", method=self._method,
+                                      periodic=False,
                                       **kwargs)
 
     def _build_output_grid(self, d_lon, d_lat):
@@ -263,7 +271,8 @@ class Regridder:
             for i in self._ds[c.FACEDIM]:
                 face_vis_data[i] = i
 
-            self._ds["face_vis"] = xr.DataArray(face_vis_data, coords=[self._ds[c.FACEDIM], self._ds[c.i], self._ds[c.j]],
+            self._ds["face_vis"] = xr.DataArray(face_vis_data,
+                                                coords=[self._ds[c.FACEDIM], self._ds[c.i], self._ds[c.j]],
                                                 dims=[c.FACEDIM, c.i, c.j])
 
             # We first need interpolate quantites to the cell center (if nescessary)
@@ -304,7 +313,7 @@ class Regridder:
             for data in set(self._ds.data_vars) - set(to_not_regrid_scalar):
                 ds[data] = self._regrid_wrapper(self._ds[data], **kwargs)
 
-            if len(list(set(_all_vectors).intersection(set(self._ds.data_vars))))>0:
+            if len(list(set(_all_vectors).intersection(set(self._ds.data_vars)))) > 0:
                 print("WARNING: You have some vector quantities in your input dataset. We can not regrid those yet.")
 
         # xESMF names longitude lon and latitude lat. We want to rename it to whatever we set in const.py to be consistent
@@ -342,7 +351,8 @@ class Regridder:
                 data_out = np.zeros([self.grid['lat'].size, self.grid['lon'].size])
             else:
                 if c.FACEDIM in ds_in.dims:
-                    assert np.all(ds_in.isel(**{c.FACEDIM:0}) == ds_in.isel(**{c.FACEDIM:1})), "you have a really messed up input dataset!"
+                    assert np.all(ds_in.isel(**{c.FACEDIM: 0}) == ds_in.isel(
+                        **{c.FACEDIM: 1})), "you have a really messed up input dataset!"
                     return ds_in[0]
                 else:
                     return ds_in
@@ -358,10 +368,9 @@ class Regridder:
                 # add up the results for 6 tiles
                 data_out_list.append(self.regridder[i](ds_in, **kwargs))
 
-            data_out = xr.concat(data_out_list,dim=c.FACEDIM)
+            data_out = xr.concat(data_out_list, dim=c.FACEDIM)
 
         return data_out
-
 
     def _rotate_vector_to_EN(self, U, V, AngleCS, AngleSN):
         """
@@ -396,8 +405,3 @@ class Regridder:
         vN = vN.transpose(..., c.j, c.i)
 
         return uE, vN
-
-
-
-
-

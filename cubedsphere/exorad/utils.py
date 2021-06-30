@@ -1,9 +1,11 @@
-import cubedsphere as cs
-import cubedsphere.const as c
+import astropy.units as u
 import numpy as np
 import os
-import astropy.units as u
 from f90nml import Parser
+import xarray as xr
+
+import cubedsphere as cs
+import cubedsphere.const as c
 
 
 class MITgcmDataParser(Parser):
@@ -66,6 +68,7 @@ def convert_vertical_to_bar(ds, dim):
     """
     ds[dim] = (np.array(ds[dim]) * u.Pa).to(u.bar).value
     return ds
+
 
 def convert_winds_and_T(ds, T_dim, W_dim):
     """
@@ -140,14 +143,23 @@ def exorad_postprocessing(ds, outdir=None, datafile=None, convert_to_bar=True, c
         datafile = f'{outdir}/data'
 
     attrs = {"p_ref": float(get_parameter(datafile, 'Ro_SeaLevel')),  # bottom layer pressure in pascal
-             "cp": float(get_parameter(datafile, 'atm_Cp')),          # heat capacity at constant pressure
-             "R": float(get_parameter(datafile, 'atm_Rd')),           # specific gas constant
-             "g": float(get_parameter(datafile, 'gravity')),          # surface gravity in m/s^2
-             "dt": int(get_parameter(datafile, 'deltaT')),            # time step size in s
-             "radius": float(get_parameter(datafile, 'rSphere'))      # planet radius in m
+             "cp": float(get_parameter(datafile, 'atm_Cp')),  # heat capacity at constant pressure
+             "R": float(get_parameter(datafile, 'atm_Rd')),  # specific gas constant
+             "g": float(get_parameter(datafile, 'gravity')),  # surface gravity in m/s^2
+             "dt": int(get_parameter(datafile, 'deltaT')),  # time step size in s
+             "radius": float(get_parameter(datafile, 'rSphere'))  # planet radius in m
              }
 
     ds.attrs.update(attrs)
+
+    # Set default names for bolometric flux and thermodynamic heatingrate
+    DEFAULT_EXOBFlux = "DEFAULT_EXOBFlux"
+    DEFAUL_EXOHR = "DEFAUL_EXOHR"
+
+    if DEFAULT_EXOBFlux in ds and c.T in ds:
+        dFdP_data = ds[DEFAULT_EXOBFlux].diff(dim=c.Z_p1) / ds[c.Z_p1].diff(dim=c.Z_p1)
+        dFdP = xr.DataArray(data=dFdP_data.data, coords=ds[c.T].coords, dims=ds[c.T].dims)
+        ds[DEFAUL_EXOHR] = dFdP * ds.g * ds[c.Z] / (ds.R * ds[c.T])
 
     # Convert Temperature and winds
     if c.T in ds:
@@ -162,6 +174,5 @@ def exorad_postprocessing(ds, outdir=None, datafile=None, convert_to_bar=True, c
 
     if convert_to_days:
         ds[c.time] = ds.iter * ds.attrs["dt"] / (3600 * 24)
-
 
     return ds
