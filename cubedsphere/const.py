@@ -58,5 +58,9 @@ extra_exorad_variables = dict(EXOBFlux=dict(dims=['k_p1', 'j', 'i'],
                                              attrs=dict(standard_name='EXOBFStar', long_name='Bolometric Stellar Flux',
                                                         units='W/m2')),
                               EXOTend=dict(dims=['k', 'j', 'i'],
-                                            attrs=dict(standard_name='EXOTend', long_name='Theta Tendency from pRT', units='K/s'))
+                                            attrs=dict(standard_name='EXOTend', long_name='Theta Tendency from pRT', units='K/s')),
+                              EXOHR=dict(dims=['k', 'j', 'i'],
+                                            attrs=dict(standard_name='EXOHR', long_name='Thermodynamic heatingrate from pRT', units='W/m3')),
+                              EXOSIT=dict(dims=['j', 'i'],
+                                            attrs=dict(standard_name='EXOSIT', long_name='Scattering iterations', units=''))
                               )

@@ -152,15 +152,6 @@ def exorad_postprocessing(ds, outdir=None, datafile=None, convert_to_bar=True, c
 
     ds.attrs.update(attrs)
 
-    # Set default names for bolometric flux and thermodynamic heatingrate
-    DEFAULT_EXOBFlux = "DEFAULT_EXOBFlux"
-    DEFAUL_EXOHR = "DEFAUL_EXOHR"
-
-    if DEFAULT_EXOBFlux in ds and c.T in ds:
-        dFdP_data = ds[DEFAULT_EXOBFlux].diff(dim=c.Z_p1) / ds[c.Z_p1].diff(dim=c.Z_p1)
-        dFdP = xr.DataArray(data=dFdP_data.data, coords=ds[c.T].coords, dims=ds[c.T].dims)
-        ds[DEFAUL_EXOHR] = dFdP * ds.g * ds[c.Z] / (ds.R * ds[c.T])
-
     # Convert Temperature and winds
     if c.T in ds:
         ds = convert_winds_and_T(ds, c.T, c.W)
