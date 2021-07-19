@@ -1,3 +1,4 @@
+
 """
 Library of utilities that can be used for plotting
 """
@@ -129,6 +130,7 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
 
     # get the figure handle
     fig = plt.gcf()
+    ax = kwargs.pop("ax", plt.gca())
 
     mapit = 0
     if projection != None:
@@ -158,8 +160,9 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
         else:
             # otherwise use full figure
             geom = ((1, 1, 1))
-        ax = fig.add_subplot(geom[0], geom[1], geom[2], projection='3d',
-                             facecolor='None')
+
+        ax = kwargs.pop("ax", fig.add_subplot(geom[0], geom[1], geom[2], projection='3d',
+                             facecolor='None'))
         # define color range
         tmp = data - data.min()
         N = tmp / tmp.max()
@@ -245,7 +248,7 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
                 if mapit == 1: xx, yy = mp(xx, yy)
 
                 # now finally plot 4x6 tiles
-                ph = np.append(ph, plt.pcolormesh(xx, yy, ff,
+                ph = np.append(ph, ax.pcolormesh(xx, yy, ff,
                                                   vmin=cax[0], vmax=cax[1],
                                                   **kwargs))
 
@@ -257,10 +260,6 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
         m = cm.ScalarMappable(cmap=colmap)
         m.set_array(data)
         plt.colorbar(m)
-    elif mapit == 0:
-        ax = fig.axes[-1]
-        ax.axis('image')
-        plt.grid('on')
 
     return ph
 
