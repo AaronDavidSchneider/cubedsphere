@@ -21,7 +21,7 @@ setuptools.setup(
         "matplotlib",
         "xesmf>0.5.0",
         "esmpy",
-        "xgcm",
+        "xgcm==0.5.2",
         "xmitgcm>0.5.0",
         "xarray",
         "f90nml"

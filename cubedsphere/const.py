@@ -15,6 +15,7 @@ Z = "Z"  # Z index
 Z_l = "Z_l"  # lower Z interface
 Z_p1 = "Z_p1"  # outer Z interface
 Z_u = "Z_u"  # upper Z interface
+Z_geo = "Z_geo"  # geometrical height
 T = "T"  # Temperature
 Ttave = "Ttave"  # Temperature averaged
 wVeltave = "wVeltave"  # vertical velocity timeaveraged

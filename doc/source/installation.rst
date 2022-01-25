@@ -4,6 +4,8 @@ Installation
 .. warning::
    You need OSX or Linux to use this package. `ESMPy <https://earthsystemmodeling.org/esmpy/>`_ (the dependency that handles the regridding) does not work with Windows.
 
+.. note::
+   Currently ``xgcm==0.5.2`` is required. You will get errors if you use a different version``
 
 Preparation
 -----------

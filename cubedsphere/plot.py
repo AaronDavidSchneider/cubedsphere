@@ -24,7 +24,10 @@ def overplot_wind(ds_reg, U, V, stepsize=1, **kwargs):
     """
 
     ax = kwargs.pop("ax", plt.gca())
-    y, x = ds_reg["lat"].values, ds_reg["lon"].values
+    if 'lat' in ds_reg:
+        y, x = ds_reg["lat"].values, ds_reg["lon"].values
+    else:
+        y, x = ds_reg["YC"].values, ds_reg["XC"].values
     xmesh, ymesh = np.meshgrid(x, y)
     ax.quiver(xmesh[::stepsize, ::stepsize], ymesh[::stepsize, ::stepsize], U[::stepsize, ::stepsize],
               V[::stepsize, ::stepsize], **kwargs)
@@ -54,6 +57,10 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
 
     # must convert xarray objects to raw numpy arrays
     # otherwise numpy masking functions won't work
+
+    # transform = kwargs.pop("transform")
+    # if transform is not None:
+    #     return _plot_cs_cartopy(dr, ds, transform, **kwargs)
 
     x_dim, y_dim = c.lon, c.lat
 

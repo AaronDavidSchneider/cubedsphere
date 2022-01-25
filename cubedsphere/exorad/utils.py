@@ -96,8 +96,8 @@ def convert_winds_and_T(ds, T_dim, W_dim):
     # calculate scale height
     H = ds.attrs["R"] / ds.attrs["g"] * ds[T_dim]
 
-    # calculate geometric height, not needed here ?!
-    z = - H * np.log(ds[c.Z] / ds.attrs["p_ref"])
+    # calculate geometric height
+    ds[c.Z_geo] = - H * np.log(ds[c.Z] / ds.attrs["p_ref"])
 
     if W_dim in ds:
         # interpolate vertical windspeed to cell center:
