@@ -1,4 +1,3 @@
-import astropy.units as u
 import numpy as np
 import os
 from f90nml import Parser
@@ -68,7 +67,7 @@ def convert_vertical_to_bar(ds, dim):
     ds: Dataset
         dataset with converted dimension
     """
-    ds[dim] = (np.array(ds[dim]) * u.Pa).to(u.bar).value
+    ds[dim] = np.array(ds[dim])/1e5
     return ds
 
 
@@ -167,7 +166,7 @@ def exorad_postprocessing(ds, outdir=None, datafile=None, convert_to_bar=True, c
         for dim in {c.Z, c.Z_l, c.Z_p1, c.Z_u}:
             if dim in ds.dims:
                 ds = convert_vertical_to_bar(ds, dim)
-        ds.attrs.update({'p_ref': (ds.p_ref*u.Pa).to(u.bar).value})
+        ds.attrs.update({'p_ref': ds.p_ref/1e5})
 
     # Convert time to days
     if convert_to_days:
