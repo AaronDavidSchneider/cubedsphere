@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='cubedsphere',
-    version='v0.1.3',
+    version='v0.2.0',
     packages=setuptools.find_packages(),
     include_package_data=True,
     url='https://github.com/AaronDavidSchneider/cubedsphere',
