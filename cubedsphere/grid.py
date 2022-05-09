@@ -2,14 +2,14 @@
 XGCM Grid initialisations for cubedsphere and regridded datasets
 """
 
+import numpy as np
+import os
 import xarray as xr
 import xgcm
-import numpy as np
 
-import cubedsphere.const as c
 import cubedsphere as cs
+import cubedsphere.const as c
 
-import os
 
 def init_grid_CS(ds=None, grid_dir=None, **kwargs):
     """
@@ -28,7 +28,7 @@ def init_grid_CS(ds=None, grid_dir=None, **kwargs):
         xgcm grid
     """
     if grid_dir is not None:
-        grid_files = os.path.join(grid_dir,"grid.t{:03d}.nc")
+        grid_files = os.path.join(grid_dir, "grid.t{:03d}.nc")
         grid_list = [xr.open_dataset(grid_files.format(i)) for i in range(1, 7)]
         grid_nc = xr.concat(grid_list, dim=range(6))
         grid_nc = cs.utils._swap_vertical_coords(grid_nc)
@@ -51,16 +51,18 @@ def init_grid_CS(ds=None, grid_dir=None, **kwargs):
                              5: {c.i: ((4, c.i, False), (1, c.j, False)),
                                  c.j: ((3, c.i, False), (0, c.j, False))}}}
 
-    if np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift")==-0.5:
+    if np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift") == -0.5:
         # We might have left values here
         coords = {c.i: {'center': c.i, 'left': c.i_g}, c.j: {'center': c.j, 'left': c.j_g}, c.time: {'center': c.time},
                   c.Z: {'center': c.Z, 'right': c.Z_u, 'left': c.Z_l, 'outer': c.Z_p1}}
-    elif np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift")==+0.5:
+    elif np.all(grid_nc[c.i].shape == grid_nc[c.i_g].shape) and grid_nc[c.i_g].attrs.get("c_grid_axis_shift") == +0.5:
         # We might have left values here
-        coords = {c.i: {'center': c.i, 'right': c.i_g}, c.j: {'center': c.j, 'right': c.j_g}, c.time: {'center': c.time},
+        coords = {c.i: {'center': c.i, 'right': c.i_g}, c.j: {'center': c.j, 'right': c.j_g},
+                  c.time: {'center': c.time},
                   c.Z: {'center': c.Z, 'right': c.Z_u, 'left': c.Z_l, 'outer': c.Z_p1}}
     else:
-        coords = {c.i: {'center': c.i, 'outer': c.i_g}, c.j: {'center': c.j, 'outer': c.j_g}, c.time: {'center': c.time},
+        coords = {c.i: {'center': c.i, 'outer': c.i_g}, c.j: {'center': c.j, 'outer': c.j_g},
+                  c.time: {'center': c.time},
                   c.Z: {'center': c.Z, 'right': c.Z_u, 'left': c.Z_l, 'outer': c.Z_p1}}
 
     grid_nc[c.drW] = grid_nc[c.HFacW] * grid_nc[c.drF]  # vertical cell size at u point
@@ -73,10 +75,12 @@ def init_grid_CS(ds=None, grid_dir=None, **kwargs):
         (c.i, c.j): [c.rA, c.rAz, c.rAs, c.rAw]  # Areas
     }
 
-    boundary = {c.i:None, c.j:None, c.time:'extrapolate', c.Z:'extrapolate'}
+    boundary = {c.i: None, c.j: None, c.time: 'extrapolate', c.Z: 'extrapolate'}
 
-    grid = xgcm.Grid(grid_nc, face_connections=face_connections, coords=coords, periodic=[c.i, c.j], metrics=metrics, boundary=boundary, **kwargs)
+    grid = xgcm.Grid(grid_nc, face_connections=face_connections, coords=coords, periodic=[c.i, c.j], metrics=metrics,
+                     boundary=boundary, **kwargs)
     return grid
+
 
 def init_grid_LL(ds=None, grid_dir=None, **kwargs):
     """

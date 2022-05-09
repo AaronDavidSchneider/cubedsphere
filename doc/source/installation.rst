@@ -4,6 +4,8 @@ Installation
 .. warning::
    You need OSX or Linux to use this package. `ESMPy <https://earthsystemmodeling.org/esmpy/>`_ (the dependency that handles the regridding) does not work with Windows.
 
+.. note::
+   Currently ``xgcm==0.5.2`` is required. You will get errors if you use a different version``
 
 Preparation
 -----------
@@ -28,6 +30,11 @@ Install cubedsphere:
 
     conda install -c conda-forge cubedsphere
 
+Update ``xmitgcm`` (needs latest version from github repo):
+
+.. code-block:: bash
+
+    pip install git+https://github.com/MITgcm/xmitgcm.git
 
 Alternative: Installation of development version
 ------------------------------------------------
@@ -44,6 +51,12 @@ Install dependencies:
 .. code-block:: bash
 
     conda install -c conda-forge xesmf esmpy xgcm xmitgcm matplotlib-base xarray
+
+Update ``xmitgcm`` (needs latest version from github repo):
+
+.. code-block:: bash
+
+    pip install git+https://github.com/MITgcm/xmitgcm.git
 
 Install cubedsphere:
 

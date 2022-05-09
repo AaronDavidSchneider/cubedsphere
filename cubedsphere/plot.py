@@ -1,16 +1,18 @@
+
 """
 Library of utilities that can be used for plotting
 """
 
 import numpy as np
-
-from matplotlib import pyplot as plt
 from matplotlib import cm
+import matplotlib.colors as mcolors
+from matplotlib import pyplot as plt
 
 import cubedsphere.const as c
 from .utils import _flatten_ds
 
-def overplot_wind(ds_reg, U, V, stepsize=1):
+
+def overplot_wind(ds_reg, U, V, stepsize=1, **kwargs):
     """
     Quick and dirty function for overplotting wind of a regridded dataset
 
@@ -21,12 +23,15 @@ def overplot_wind(ds_reg, U, V, stepsize=1):
     stepsize: integer
         specify the stepsize for which wind arrows should be plotted
     """
-    ax = plt.gca()
-    y, x = ds_reg["lat"].values, ds_reg["lon"].values
+
+    ax = kwargs.pop("ax", plt.gca())
+    if 'lat' in ds_reg:
+        y, x = ds_reg["lat"].values, ds_reg["lon"].values
+    else:
+        y, x = ds_reg["YC"].values, ds_reg["XC"].values
     xmesh, ymesh = np.meshgrid(x, y)
     ax.quiver(xmesh[::stepsize, ::stepsize], ymesh[::stepsize, ::stepsize], U[::stepsize, ::stepsize],
-              V[::stepsize, ::stepsize])
-
+              V[::stepsize, ::stepsize], **kwargs)
 
 
 def plotCS(dr, ds, mask_size=None, **kwargs):
@@ -54,32 +59,30 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
     # must convert xarray objects to raw numpy arrays
     # otherwise numpy masking functions won't work
 
+    # transform = kwargs.pop("transform")
+    # if transform is not None:
+    #     return _plot_cs_cartopy(dr, ds, transform, **kwargs)
+
     x_dim, y_dim = c.lon, c.lat
 
     if len(ds[c.lon].shape) > 2:
-        if ds[c.lon].shape[-1] == dr.shape[-1]:
+        if ds[c.lon].shape[-1] == dr[c.lon].shape[-1]:
             x_dim = c.lon
             x = _flatten_ds(ds[x_dim]).values
             data = _flatten_ds(dr).values
-        elif ds[c.lon_b].shape[-1] == dr.shape[-1]:
-            x_dim = c.lon_b
-            x = _flatten_ds(ds[x_dim]).values
-            data = _flatten_ds(dr).values
-        if ds[c.lat].shape[-2] == dr.shape[-2]:
+        else:
+            raise IndexError("your dataset is incompatible")
+
+        if ds[c.lat].shape[-2] == dr[c.lat].shape[-2]:
             y_dim = c.lat
             y = _flatten_ds(ds[y_dim]).values
-        elif ds[c.lat_b].shape[-2] == dr.shape[-2]:
-            y_dim = c.lat_b
-            y = _flatten_ds(ds[y_dim]).values
+        else:
+            raise IndexError("your dataset is incompatible")
 
     else:
         x = ds[x_dim].values
         y = ds[y_dim].values
         data = dr.values
-    #assert dr.shape == ds[
-    #    x_dim].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds[x_dim].shape}"
-    #assert dr.shape == ds[
-    #    y_dim].shape, f"shape mismatch. shape of data: {dr.shape}, shape of coordinates: {ds[y_dim].shape}"
 
     if mask_size is not None:
         try:
@@ -87,8 +90,10 @@ def plotCS(dr, ds, mask_size=None, **kwargs):
             data = np.ma.masked_where(mask, data)
         except IndexError:
             print("caution: No masking possible!")
-
-    return _plot_cs_raw(x, y, data, **kwargs)
+    try:
+        return _plot_cs_raw(x, y, data, **kwargs)
+    except IndexError:
+        return _plot_cs_raw(x.T, y.T, data.T, **kwargs)
 
 
 def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
@@ -133,6 +138,7 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
 
     # get the figure handle
     fig = plt.gcf()
+    ax = kwargs.pop("ax", plt.gca())
 
     mapit = 0
     if projection != None:
@@ -153,6 +159,10 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
     if vmin != None: cax[0] = vmin
     if vmax != None: cax[1] = vmax
 
+    norm = kwargs.pop('norm', None)
+    if norm is None:
+        norm = mcolors.Normalize(cax[0], cax[1])
+
     if mapit == -1:
         # set up 3D plot
         if len(fig.axes) > 0:
@@ -162,8 +172,9 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
         else:
             # otherwise use full figure
             geom = ((1, 1, 1))
-        ax = fig.add_subplot(geom[0], geom[1], geom[2], projection='3d',
-                             facecolor='None')
+
+        ax = kwargs.pop("ax", fig.add_subplot(geom[0], geom[1], geom[2], projection='3d',
+                             facecolor='None'))
         # define color range
         tmp = data - data.min()
         N = tmp / tmp.max()
@@ -249,8 +260,8 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
                 if mapit == 1: xx, yy = mp(xx, yy)
 
                 # now finally plot 4x6 tiles
-                ph = np.append(ph, plt.pcolormesh(xx, yy, ff,
-                                                  vmin=cax[0], vmax=cax[1],
+                ph = np.append(ph, ax.pcolormesh(xx, yy, ff,
+                                                  norm=norm,
                                                   **kwargs))
 
     if mapit == -1:
@@ -261,12 +272,9 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
         m = cm.ScalarMappable(cmap=colmap)
         m.set_array(data)
         plt.colorbar(m)
-    elif mapit == 0:
-        ax = fig.axes[-1]
-        ax.axis('image')
-        plt.grid('on')
 
     return ph
+
 
 def _sph2cart(azim_sph_coord, elev_sph_coord):
     r = np.cos(elev_sph_coord)
@@ -274,6 +282,3 @@ def _sph2cart(azim_sph_coord, elev_sph_coord):
     y = r * np.cos(azim_sph_coord)
     z = np.sin(elev_sph_coord)
     return x, y, z
-
-
-
