@@ -3,6 +3,8 @@ import numpy as np
 import os
 from f90nml import Parser
 import xarray as xr
+import xgcm
+from xgcm.autogenerate import generate_grid_ds
 
 import cubedsphere as cs
 import cubedsphere.const as c
@@ -142,12 +144,14 @@ def exorad_postprocessing(ds, outdir=None, datafile=None, convert_to_bar=True, c
     if outdir is not None:
         datafile = f'{outdir}/data'
 
+    # Add metadata
+    radius = float(get_parameter(datafile, 'rSphere')) # planet radius in m
     attrs = {"p_ref": float(get_parameter(datafile, 'Ro_SeaLevel')),  # bottom layer pressure in pascal
              "cp": float(get_parameter(datafile, 'atm_Cp')),  # heat capacity at constant pressure
              "R": float(get_parameter(datafile, 'atm_Rd')),  # specific gas constant
              "g": float(get_parameter(datafile, 'gravity')),  # surface gravity in m/s^2
              "dt": int(get_parameter(datafile, 'deltaT')),  # time step size in s
-             "radius": float(get_parameter(datafile, 'rSphere'))  # planet radius in m
+             "radius": radius,
              }
 
     ds.attrs.update(attrs)
@@ -158,12 +162,72 @@ def exorad_postprocessing(ds, outdir=None, datafile=None, convert_to_bar=True, c
     if c.Ttave in ds:
         ds = convert_winds_and_T(ds, c.Ttave, c.wVeltave)
 
+    # Convert pressure from SI to bar
     if convert_to_bar:
         for dim in {c.Z, c.Z_l, c.Z_p1, c.Z_u}:
             if dim in ds.dims:
                 ds = convert_vertical_to_bar(ds, dim)
+        ds.attrs.update({'p_ref': (ds.p_ref*u.Pa).to(u.bar).value})
 
+    # Convert time to days
     if convert_to_days:
         ds[c.time] = ds.iter * ds.attrs["dt"] / (3600 * 24)
+
+    # Add metrics to dataset
+    if c.FACEDIM not in ds.dims:
+        ds = add_distances(ds, radius = radius)
+
+    return ds
+
+
+def add_distances(ds, radius):
+    """Add metric distances into dataset if dataset is in lon lat.
+
+    PARAMETERS
+    ----------
+    ds : xarray.DataSet (in lon,lat)
+    radius: planetary radius im meters
+
+    RETURNS
+    -------
+    ds  : xarray.DataArray distance inferred from dlon
+    dy  : xarray.DataArray distance inferred from dlat
+    """
+    def dll_dist(dlon, dlat, lon, lat, radius):
+        """Converts lat/lon differentials into distances in meters
+
+        PARAMETERS
+        ----------
+        dlon : xarray.DataArray longitude differentials
+        dlat : xarray.DataArray latitude differentials
+        lon  : xarray.DataArray longitude values
+        lat  : xarray.DataArray latitude values
+        radius: planetary radius im meters
+
+        RETURNS
+        -------
+        dx  : xarray.DataArray distance inferred from dlon
+        dy  : xarray.DataArray distance inferred from dlat
+        """
+        distance_1deg_equator = 2.0*np.pi*radius*1.0/360.0
+        dx = dlon * xr.ufuncs.cos(xr.ufuncs.deg2rad(lat)) * distance_1deg_equator
+        dy = ((lon * 0) + 1) * dlat * distance_1deg_equator
+        return dx, dy
+
+    if c.lon not in ds.dims or c.lat not in ds.dims:
+        return ds
+
+    ds = generate_grid_ds(ds, {'X': c.lon, 'Y': c.lat})
+    xgcm_grid = xgcm.Grid(ds, periodic=['X'])
+
+    dlong = xgcm_grid.diff(ds[c.lon], 'X', boundary_discontinuity=360)
+    dlonc = xgcm_grid.diff(ds["lon_left"], 'X', boundary_discontinuity=360)
+
+    dlatg = xgcm_grid.diff(ds[c.lat], 'Y', boundary='fill', fill_value=np.nan)
+    dlatc = xgcm_grid.diff(ds["lat_left"], 'Y', boundary='fill', fill_value=np.nan)
+
+    ds.coords['dxg'], ds.coords['dyg'] = dll_dist(dlong, dlatg, ds[c.lon], ds[c.lat], radius)
+    ds.coords['dxc'], ds.coords['dyc'] = dll_dist(dlonc, dlatc, ds[c.lon], ds[c.lat], radius)
+    ds.coords['area_c'] = ds.dxc * ds.dyc
 
     return ds

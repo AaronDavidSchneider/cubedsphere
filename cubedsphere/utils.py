@@ -36,9 +36,10 @@ def _add_swap_dim_attr(ds):
     return ds
 
 
-def open_mnc_dataset(outdir, iternumber, fname_list=["state", "secmomDiag", "dynDiag", "surfDiag"]):
+def open_mnc_dataset(outdir, iternumber, fname_list=["state"]):
     """
     Wrapper that opens simulation outputs from mnc outputs.
+    NOT TESTED.
 
     Parameters
     ----------
@@ -55,6 +56,8 @@ def open_mnc_dataset(outdir, iternumber, fname_list=["state", "secmomDiag", "dyn
         Dataset of simulation output
     """
     # read_parameters(outdir)
+
+    print("WARNING: This function is not being tested and likely does not work.")
 
     dataset_list = []
     for fname in fname_list:
@@ -198,6 +201,9 @@ def open_ascii_dataset(outdir, return_grid=True, **kwargs):
     except ValueError as error:
         print(f"could not rename, got error: {error}")
     ds = ds.transpose(c.FACEDIM, ...)
+
+    # convert endian! This reduces a lot of problems...
+    ds = ds.astype('<f8')
 
     if return_grid:
         return ds, grid

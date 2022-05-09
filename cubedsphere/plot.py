@@ -5,6 +5,7 @@ Library of utilities that can be used for plotting
 
 import numpy as np
 from matplotlib import cm
+import matplotlib.colors as mcolors
 from matplotlib import pyplot as plt
 
 import cubedsphere.const as c
@@ -158,6 +159,10 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
     if vmin != None: cax[0] = vmin
     if vmax != None: cax[1] = vmax
 
+    norm = kwargs.pop('norm', None)
+    if norm is None:
+        norm = mcolors.Normalize(cax[0], cax[1])
+
     if mapit == -1:
         # set up 3D plot
         if len(fig.axes) > 0:
@@ -256,7 +261,7 @@ def _plot_cs_raw(x, y, data, projection=None, vmin=None, vmax=None, **kwargs):
 
                 # now finally plot 4x6 tiles
                 ph = np.append(ph, ax.pcolormesh(xx, yy, ff,
-                                                  vmin=cax[0], vmax=cax[1],
+                                                  norm=norm,
                                                   **kwargs))
 
     if mapit == -1:

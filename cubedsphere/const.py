@@ -63,5 +63,15 @@ extra_exorad_variables = dict(EXOBFlux=dict(dims=['k_p1', 'j', 'i'],
                               EXOHR=dict(dims=['k', 'j', 'i'],
                                             attrs=dict(standard_name='EXOHR', long_name='Thermodynamic heatingrate from pRT', units='W/m3')),
                               EXOSIT=dict(dims=['j', 'i'],
-                                            attrs=dict(standard_name='EXOSIT', long_name='Scattering iterations', units=''))
+                                            attrs=dict(standard_name='EXOSIT', long_name='Scattering iterations', units='')),
+                              EXOFricU=dict(dims=['k', 'j', 'i_g'],
+                                         attrs=dict(standard_name='EXOFricU',
+                                                    long_name='friction in U direction', units='m/s2', mate='EXOFricV')),
+                              EXOFricV=dict(dims=['k', 'j_g', 'i'],
+                                         attrs=dict(standard_name='EXOFricV',
+                                                    long_name='friction in V direction', units='m/s2', mate='EXOFricU')),
+                              EXOFricHeat=dict(dims=['k', 'j', 'i'],
+                                         attrs=dict(standard_name='EXOFricHeat',
+                                                    long_name='Theta Tendency from rayleighfriction', units='K/s')),
+
                               )

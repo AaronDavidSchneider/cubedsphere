@@ -30,6 +30,11 @@ Install cubedsphere:
 
     conda install -c conda-forge cubedsphere
 
+Update ``xmitgcm`` (needs latest version from github repo):
+
+.. code-block:: bash
+
+    pip install git+https://github.com/MITgcm/xmitgcm.git
 
 Alternative: Installation of development version
 ------------------------------------------------
@@ -46,6 +51,12 @@ Install dependencies:
 .. code-block:: bash
 
     conda install -c conda-forge xesmf esmpy xgcm xmitgcm matplotlib-base xarray
+
+Update ``xmitgcm`` (needs latest version from github repo):
+
+.. code-block:: bash
+
+    pip install git+https://github.com/MITgcm/xmitgcm.git
 
 Install cubedsphere:
 

@@ -35,16 +35,18 @@ class Regridder:
     --------
     >>> import cubedsphere as cs  # import cubedsphere
     >>> outdir = "../run"  # specify output directory
-    >>> ds = cs.open_mnc_dataset(outdir, 276480)  # open dataset
-    >>> regrid = cs.Regridder(ds)  # init regridder
-    >>> ds_regrid = regrid()  # perform regridding of dataset
+    >>> # open Dataset
+    >>> ds_ascii, grid = cs.open_ascii_dataset(outdir_ascii, iters='all', prefix = ["T","U","V","W"])
+    >>> # regrid dataset
+    >>> regrid = cs.Regridder(ds_ascii, grid)
+    >>> ds_reg = regrid()
 
     Notes
     -----
     You can find more examples in the examples directory
     """
 
-    def __init__(self, ds, input_type="cs", d_lon=5, d_lat=4, cs_grid=None, concat_mode=False, filename="weights",
+    def __init__(self, ds, cs_grid, input_type="cs", d_lon=5, d_lat=4, concat_mode=False, filename="weights",
                  method='conservative', **kwargs):
         """
         Build the regridder. This step will create the output grid and weight files which will then be used to regrid the dataset.
@@ -53,6 +55,10 @@ class Regridder:
         ----------
         ds: xarray DataSet
             Dataset to be regridded. Dataset must contain input grid information.
+        cs_grid: xarray DataSet
+            Dataset containing cubedsphere grid information.
+            If input_type=="cs": Input grid. Required!
+            If input_type=="ll": Output cs grid. Required!
         input_type: string
             Needs to be "cs" or "ll". Will result in an error if something else is used here.
             If "cs": input=cs grid -> regrid to longitude lattitude (ll)
@@ -61,10 +67,6 @@ class Regridder:
             Longitude step size, i.e. grid resolution. Only used if input_type=="cs".
         d_lat: integer
             Latitude step size, i.e. grid resolution. Only used if input_type=="cs".
-        cs_grid: xarray DataSet
-            Dataset containing cubedsphere grid information.
-            If input_type=="cs": Alternative input grid. Caution with this practice! Should be None by default!
-            If input_type=="ll": Output cs grid. Required!
         concat_mode: boolean
             use one regridding instance instead of one regridder for each face. Only used if input_type=="cs".
         filename: string
@@ -83,15 +85,7 @@ class Regridder:
                 f"wrong input_type={self._input_type}. You need to either use input_type='cs' or input_type='ll'.")
 
         if self._input_type == "cs":
-            if cs_grid is None:
-                self._ds_grid_in = self._ds
-            else:
-                self._ds_grid_in = cs_grid
-                if cs_grid != self._ds:
-                    print(
-                        "Caution: You chose to use an input grid that is different from the dataset to be regridded,\n"
-                        "Only do so, if you are really sure that the input_grid matches!\n")
-
+            self._ds_grid_in = cs_grid
             self.grid = self._build_output_grid(d_lon, d_lat)
             self._concat_mode = concat_mode
         else:
