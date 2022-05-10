@@ -11,7 +11,7 @@ Capabilities
 -------------
 - regrid cubed sphere datasets using `xESMF <https://xesmf.readthedocs.io/en/latest>`__ and `xgcm <https://xgcm.readthedocs.io/en/latest>`__
 - open datasets created by the `mnc <https://mitgcm.readthedocs.io/en/latest/outp_pkgs/outp_pkgs.html#netcdf-i-o-pkg-mnc>`__ package (depreciated)
-- open datasets using `xmitgcm <https://xmitgcm.readthedocs.io/en/latest>`__ (needs current PR `#98 <https://github.com/MITgcm/xmitgcm/pull/98>`__ )
+- open datasets using `xmitgcm <https://xmitgcm.readthedocs.io/en/latest>`__ (needs latest version)
 - plot original cubed sphere data
 - some more small utilities
 - more to come...
@@ -37,5 +37,3 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`search`
-
-
