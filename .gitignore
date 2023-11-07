@@ -1,4 +1,7 @@
 *.nc
+doc/source/notebooks/HD2_test/*
+doc/source/notebooks/HD2.tar.gz
+.vscode/*
 # Created by https://www.toptal.com/developers/gitignore/api/osx,pycharm,clion,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=osx,pycharm,clion,python
 
