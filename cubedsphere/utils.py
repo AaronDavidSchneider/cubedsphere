@@ -5,6 +5,7 @@ Helper functions used throughout this package and utilities to open datasets usi
 import sys
 import xarray as xr
 import xmitgcm
+import os
 
 import cubedsphere.const as c
 
@@ -153,10 +154,15 @@ def open_ascii_dataset(outdir, return_grid=True, **kwargs):
         print("vertical dimensions could not be swapped. Keeping logical dimensions.")
 
     if return_grid:
+        if os.path.isfile(f'{outdir}/grid_cs32.face001.bin'):
+            gridfiles = f'{outdir}/grid_cs32.face<NFACET>.bin'
+        else:
+            gridfiles = f'{outdir}/tile<NFACET>.mitgrid'
+
         # Note: This needs https://github.com/MITgcm/xmitgcm/pull/246 to work
         em = xmitgcm.utils.get_extra_metadata(domain='cs', nx=ds["XC"].shape[0])
         grid = xmitgcm.utils.get_grid_from_input(
-            f'{outdir}/grid_cs32.face<NFACET>.bin',
+            gridfiles,
             geometry='cs',
             extra_metadata=em,
             outer=True).load()
